@@ -3,7 +3,7 @@ import asyncio
 import json
 import re
 import sys
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import httpx
 
@@ -16,17 +16,54 @@ def parse_init_data(html: str) -> Any:
     return init_data
 
 
-def main(ameba_id: str, parallel: int, limit_page: Optional[int]):
-    # get blogId, max_page
-    main_init_data = parse_init_data(
-        httpx.get(f"https://ameblo.jp/{ameba_id}/entrylist.html").text
-    )
+def fetch_init_data(url: str) -> Any:
+    return parse_init_data(httpx.get(url).text)
+
+
+async def fetch_init_data_async(url: str, client: httpx.AsyncClient) -> Any:
+    return parse_init_data((await client.get(url)).text)
+
+
+def main_get_entries(
+    ameba_id: str,
+    parallel: int,
+    theme: Optional[str],
+):
+    main_init_data = fetch_init_data(f"https://ameblo.jp/{ameba_id}/entrylist.html")
+
+    # extract blog id
     blogPageMap: dict = main_init_data["entryState"]["blogPageMap"]
     blogPageMap: dict = list(blogPageMap.values())[0]
-    blogId = blogPageMap["blogId"]
-    max_page_actual = blogPageMap["paging"]["max_page"]
-    max_page = min(max_page_actual, limit_page or float("inf"))
-    print(f":: {blogId = }, {max_page_actual = }", file=sys.stderr)
+    blog_id = blogPageMap["blogId"]
+
+    # extract max_page
+    max_page = None
+    theme_id = None
+    page_to_url: Callable[[str], str]
+    if theme:
+        # extract theme_id
+        themeMap: dict[str, dict] = main_init_data["themesState"]["themeMap"]
+        for k, v in themeMap.items():
+            if v["theme_name"] == theme:
+                theme_id = int(k)
+                break
+        else:
+            raise RuntimeError(f"theme not found ({theme})")
+        theme_init_data = fetch_init_data(
+            f"https://ameblo.jp/{ameba_id}/theme-{theme_id}.html"
+        )
+        themePageMap: dict = theme_init_data["themesState"]["themePageMap"]
+        themePageMap: dict = list(themePageMap.values())[0]
+        max_page = themePageMap["paging"]["max_page"]
+        page_to_url = (
+            lambda page: f"https://ameblo.jp/{ameba_id}/theme{page}-{theme_id}.html"
+        )
+
+    else:
+        max_page = blogPageMap["paging"]["max_page"]
+        page_to_url = lambda page: f"https://ameblo.jp/{ameba_id}/entrylist-{page}.html"
+
+    print(f":: {blog_id = }, {theme_id = }, {max_page = }", file=sys.stderr)
 
     # fetch pages in parallel
     async def fetch_pages() -> None:
@@ -45,9 +82,8 @@ def main(ameba_id: str, parallel: int, limit_page: Optional[int]):
 
     # get entries and reactions
     async def fetch_by_page(client: httpx.AsyncClient, page: int) -> None:
-        init_data_res = await client.get(
-            f"https://ameblo.jp/{ameba_id}/entrylist-{page}.html"
-        )
+        # fetch entries
+        init_data_res = await client.get(page_to_url(page))
         init_data = parse_init_data(init_data_res.text)
         entryMap: dict = init_data["entryState"]["entryMap"]
         entries: list[dict] = list(entryMap.values())
@@ -55,7 +91,7 @@ def main(ameba_id: str, parallel: int, limit_page: Optional[int]):
         # fetch reactions
         entryIds = "%2C".join(map(lambda e: str(e["entry_id"]), entries))
         reactions_res = await client.get(
-            f"https://ameblo.jp/_api/blogEntryReactions;blogId={blogId};entryIds={entryIds}"
+            f"https://ameblo.jp/_api/blogEntryReactions;blogId={blog_id};entryIds={entryIds}"
         )
         reactions: dict = reactions_res.json()
 
@@ -68,13 +104,30 @@ def main(ameba_id: str, parallel: int, limit_page: Optional[int]):
     asyncio.run(fetch_pages())
 
 
+def main_get_themes(ameba_id: str) -> None:
+    main_init_data = parse_init_data(
+        httpx.get(f"https://ameblo.jp/{ameba_id}/entrylist.html").text
+    )
+    themeMap: dict[str, dict] = main_init_data["themesState"]["themeMap"]
+    result = {k: v["theme_name"] for k, v in themeMap.items()}
+    print(json.dumps(result, ensure_ascii=False))
+
+
 def main_cli():
     parser = argparse.ArgumentParser()
-    parser.add_argument("ameba_id")
-    parser.add_argument("--parallel", type=int, default=25)
-    parser.add_argument("--limit-page", type=int)
-    args = parser.parse_args()
-    main(**args.__dict__)
+    subparsers = parser.add_subparsers(dest="command")
+
+    sub1 = subparsers.add_parser("get_entries")
+    sub1.add_argument("ameba_id")
+    sub1.add_argument("--parallel", type=int, default=50)
+    sub1.add_argument("--theme", type=str)
+
+    sub2 = subparsers.add_parser("get_themes")
+    sub2.add_argument("ameba_id")
+
+    args = parser.parse_args().__dict__
+    command = args.pop("command")
+    globals()[f"main_{command}"](**args)
 
 
 if __name__ == "__main__":
