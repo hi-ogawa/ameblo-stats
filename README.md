@@ -9,7 +9,7 @@ curl -sf https://ameblo.jp/juicejuice-official/entrylist.html | python -c 'impor
 
 # scrape entries and reaction counts
 python scrape.py ocha-norma > data/ocha-norma.ndjson
-python scrape.py juicejuice-official --limit-page 200 > data/juicejuice-official.ndjson
+python scrape.py juicejuice-official > data/juicejuice-official.ndjson
 
 # visualize reaction counts with python notebook
 # - see visualize.ipynb
