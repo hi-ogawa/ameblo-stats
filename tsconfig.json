@@ -6,7 +6,7 @@
     "module": "commonjs",
     "target": "es2021",
     "lib": ["es2021", "dom"],
-    "types": [],
+    "types": ["@types/node"],
     "moduleResolution": "node",
     "jsx": "react-jsx",
     "allowJs": false,

@@ -62,15 +62,24 @@ const REACTIONS_API_SCHEMA = z.record(
 
 type InitData = z.infer<typeof INIT_DATA_SCHEMA>;
 
-type ThemeData = InitData["themesState"]["themeMap"][string];
+export type ThemeDataRaw = InitData["themesState"]["themeMap"][string];
 
-type EntryData = InitData["entryState"]["entryMap"][string];
+export type ThemeData = ThemeDataRaw & { amebaId: string };
+
+type EntryDataRaw = InitData["entryState"]["entryMap"][string];
 
 type ReactionsApiData = z.infer<typeof REACTIONS_API_SCHEMA>;
 
 type Reactions = ReactionsApiData[string];
 
-type Entry = EntryData & Reactions;
+export type Entry = EntryDataRaw & Reactions;
+
+export const COUNT_TYPES = ["commentCnt", "iineCnt"] as const;
+export const COUNT_TYPE_TO_NAME = {
+  commentCnt: "comment",
+  iineCnt: "like",
+} as const;
+export type CountType = typeof COUNT_TYPES[number];
 
 //
 // fetching
@@ -107,7 +116,8 @@ async function fetchBlogEntryReactions(
 export async function getThemes(amebaId: string): Promise<ThemeData[]> {
   const url = `https://ameblo.jp/${amebaId}/entrylist.html`;
   const initData = await fetchInitData(url);
-  return Object.values(initData.themesState.themeMap);
+  let results = Object.values(initData.themesState.themeMap);
+  return results.map((result) => ({ amebaId, ...result }));
 }
 
 export async function fetchEntries(
