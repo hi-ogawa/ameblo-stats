@@ -1,0 +1,7 @@
+.venv
+node_modules
+.cache
+build
+.eslintcache
+pnpm-lock.yaml
+data
