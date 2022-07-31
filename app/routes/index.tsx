@@ -109,13 +109,18 @@ export default function PageComponent() {
           margin: "0 auto",
           display: "flex",
           flexDirection: "column",
-          padding: "1rem",
+          padding: "1rem 0", // HACK: horizontal padding is moved to children
           gap: "0.8rem",
           border: "1px solid lightgray",
         }}
       >
         <label
-          style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.3rem",
+            padding: "0 1rem",
+          }}
         >
           <span>Ameba ID</span>
           <NoSSR fallback={<div style={{ height: "38px" }}></div>}>
@@ -137,7 +142,12 @@ export default function PageComponent() {
           </NoSSR>
         </label>
         <label
-          style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.3rem",
+            padding: "0 1rem",
+          }}
         >
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <span>Themes</span>
@@ -164,7 +174,12 @@ export default function PageComponent() {
           </NoSSR>
         </label>
         <label
-          style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.3rem",
+            padding: "0 1rem",
+          }}
         >
           <span>Count type</span>
           <select {...form.register("countType")}>
