@@ -306,10 +306,10 @@ function Chart(props: {
           }
           const datetime = entry.entry_created_datetime.slice(0, 10);
           const img = entry.image_url
-            ? `<img src="https://stat.ameba.jp${entry.image_url}?cpd=100" height="100" width="100" />`
+            ? `<img src="https://stat.ameba.jp${entry.image_url}?cpd=200" height="200" width="200" />`
             : "<span>(no image)<span>";
           return `
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; width: 200px">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; width: 250px">
               <span style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">
                 ${entry.entry_title}
               </span>
