@@ -33,7 +33,11 @@ export function EchartsWrapper(props: {
 
   React.useEffect(() => {
     if (instance.current) {
-      instance.current.setOption(props.option);
+      console.log(props.option);
+      instance.current.setOption(props.option, {
+        notMerge: true,
+        replaceMerge: ["series"],
+      });
     }
   }, [props.option]);
 

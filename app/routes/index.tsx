@@ -246,8 +246,24 @@ function Chart(props: {
 }) {
   const [chart, setChart] = React.useState<echarts.ECharts>();
   const themesDep = props.themes
-    .map((t) => t.theme.amebaId + t.theme.theme_id)
+    .map((t) => t.theme.amebaId + "#" + t.theme.theme_id)
     .join("@");
+
+  // disable dataZoom for mobile
+  const [isMobile, setIsMobile] = React.useState(false);
+  React.useEffect(() => {
+    const query = window.matchMedia(
+      "(any-hover: hover) and (any-pointer: fine)"
+    );
+    const handler = (e: { matches: boolean }) => {
+      setIsMobile(!e.matches);
+    };
+    handler(query);
+    query.addEventListener("change", handler);
+    return () => {
+      query.addEventListener("change", handler);
+    };
+  }, []);
 
   React.useEffect(() => {
     if (chart) {
@@ -326,6 +342,7 @@ function Chart(props: {
       dataZoom: [
         {
           type: "inside",
+          disabled: isMobile,
           startValue: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
           endValue: new Date(),
         },
@@ -336,7 +353,7 @@ function Chart(props: {
       ],
     };
     return option;
-  }, [props.countType, themesDep]);
+  }, [props.countType, themesDep, isMobile]);
 
   return (
     <EchartsWrapper
