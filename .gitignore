@@ -1,0 +1,6 @@
+.venv
+node_modules
+.cache
+build
+.eslintcache
+.vercel
