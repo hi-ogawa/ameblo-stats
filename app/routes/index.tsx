@@ -52,12 +52,6 @@ export default function PageComponent() {
                 theme_name: "中山夏月姫",
                 entry_cnt: 214,
               },
-              {
-                amebaId: "juicejuice-official",
-                theme_id: "10115236106",
-                theme_name: "江端妃咲",
-                entry_cnt: 378,
-              },
             ],
             countType: "commentCnt",
           }
@@ -314,28 +308,20 @@ function Chart(props: {
         trigger: "axis",
         formatter: ([args]: any) => {
           const { theme, entry }: SelectedData = args.data[2];
+          const datetime = entry.entry_created_datetime.slice(0, 10);
           const img = entry.image_url
-            ? `<img src="https://stat.ameba.jp${entry.image_url}?cpd=200" height="200" width="200" />`
-            : "(no image available)";
+            ? `<img src="https://stat.ameba.jp${entry.image_url}?cpd=100" height="100" width="100" />`
+            : "<span>(no image)<span>";
           return `
-            <span style="font-size: 1.1rem;" >${entry.entry_title}</span>
-            <table>
-              <tbody>
-                <tr>
-                  <td>theme: </td>
-                  <td>${theme.theme_name}</td>
-                </tr>
-                <tr>
-                  <td>date: </td>
-                  <td>${entry.entry_created_datetime.slice(0, 10)}</td>
-                </tr>
-                <tr>
-                  <td>${COUNT_TYPE_TO_NAME[props.countType]}: </td>
-                  <td>${entry[props.countType]}</td>
-                </tr>
-              </tbody>
-            </table>
-            ${img}
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; width: 200px">
+              <span style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">
+                ${entry.entry_title}
+              </span>
+              <span style="color: gray">
+                ${theme.theme_name} · ${datetime} (${entry[props.countType]})
+              </span>
+              ${img}
+            </div>
           `;
         },
       },
