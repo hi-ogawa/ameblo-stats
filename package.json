@@ -13,7 +13,7 @@
     "prettier:diff": "prettier -w --ignore-unknown --no-error-on-unmatched-pattern $(npm run -s diff)",
     "eslint": "npm run eslint:check -- --fix",
     "eslint:check": "eslint ./app --cache --ext .js,.jsx,.ts,.tsx",
-    "build": "bash scripts/build-vercel.sh",
+    "build": "bash misc/build-vercel.sh",
     "deploy:staging": "npm run build && vercel deploy --prebuilt build/remix/production/deploy",
     "deploy:production": "npm run build && vercel deploy --prebuilt build/remix/production/deploy --prod",
     "diff": "git diff --name-only ${DIFF_COMMIT:-HEAD} && git ls-files --others --exclude-standard",
