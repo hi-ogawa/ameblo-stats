@@ -4,4 +4,4 @@ node_modules
 build
 .eslintcache
 pnpm-lock.yaml
-data
+misc/old
