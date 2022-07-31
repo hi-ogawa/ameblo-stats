@@ -306,6 +306,8 @@ function Chart(props: {
       legend: {},
       tooltip: {
         trigger: "axis",
+        // TODO: tooltip position is not good on mobile
+        // position: "inside",
         formatter: ([args]: any) => {
           const { theme, entry }: SelectedData = args.data[2];
           const datetime = entry.entry_created_datetime.slice(0, 10);
@@ -328,7 +330,7 @@ function Chart(props: {
       dataZoom: [
         {
           type: "inside",
-          disabled: isMobile,
+          moveOnMouseMove: !isMobile,
           startValue: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
           endValue: new Date(),
         },
