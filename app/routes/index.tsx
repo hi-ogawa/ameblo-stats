@@ -52,12 +52,6 @@ export default function PageComponent() {
                 theme_name: "中山夏月姫",
                 entry_cnt: 214,
               },
-              {
-                amebaId: "juicejuice-official",
-                theme_id: "10115236106",
-                theme_name: "江端妃咲",
-                entry_cnt: 378,
-              },
             ],
             countType: "commentCnt",
           }
@@ -109,13 +103,18 @@ export default function PageComponent() {
           margin: "0 auto",
           display: "flex",
           flexDirection: "column",
-          padding: "1rem",
+          padding: "1rem 0", // HACK: horizontal padding is moved to children
           gap: "0.8rem",
           border: "1px solid lightgray",
         }}
       >
         <label
-          style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.3rem",
+            padding: "0 1rem",
+          }}
         >
           <span>Ameba ID</span>
           <NoSSR fallback={<div style={{ height: "38px" }}></div>}>
@@ -137,7 +136,12 @@ export default function PageComponent() {
           </NoSSR>
         </label>
         <label
-          style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.3rem",
+            padding: "0 1rem",
+          }}
         >
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <span>Themes</span>
@@ -148,7 +152,7 @@ export default function PageComponent() {
           <NoSSR fallback={<div style={{ height: "38px" }}></div>}>
             <ReactSelect
               isMulti
-              placeholder="Enter IDs"
+              placeholder="Select Themes"
               value={selectedThemes.map((t) => ({
                 label: t.theme_name,
                 value: t,
@@ -164,7 +168,12 @@ export default function PageComponent() {
           </NoSSR>
         </label>
         <label
-          style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.3rem",
+            padding: "0 1rem",
+          }}
         >
           <span>Count type</span>
           <select {...form.register("countType")}>
@@ -231,21 +240,17 @@ function Chart(props: {
 }) {
   const [chart, setChart] = React.useState<echarts.ECharts>();
   const themesDep = props.themes
-    .map((t) => t.theme.amebaId + t.theme.theme_id)
+    .map((t) => t.theme.amebaId + "#" + t.theme.theme_id)
     .join("@");
+
+  // tweak dataZoom for mobile
+  const isHoverDevice = useIsHoverDevice();
 
   React.useEffect(() => {
     if (chart) {
       const handler = (args: any) => {
-        console.log(args);
-        const { theme, entries } = props.themes[args.seriesIndex];
-        const entry = entries[args.dataIndex];
-        console.log("click", { theme, entry });
-        if (!entry) {
-          props.setSelected(undefined);
-        } else {
-          props.setSelected({ theme, entry });
-        }
+        const selected: SelectedData = args.data[2];
+        props.setSelected(selected);
       };
       chart.on("click", handler);
       return () => {
@@ -275,46 +280,51 @@ function Chart(props: {
         name: theme.theme_name,
         type: "line",
         symbol: "circle",
-        data: entries.map((e) => [
-          new Date(e.entry_created_datetime),
-          e[props.countType],
-        ]),
+        emphasis: {
+          disabled: true,
+        },
+        data: entries.map(
+          (entry) =>
+            [
+              new Date(entry.entry_created_datetime),
+              entry[props.countType],
+              // sneak in raw data for click and tooltip
+              { theme, entry },
+            ] as any
+        ),
       })),
       legend: {},
       tooltip: {
         trigger: "axis",
+        // TODO: tooltip position is not good on mobile
+        // position: "inside",
         formatter: ([args]: any) => {
-          const { theme, entries } = props.themes[args.seriesIndex];
-          const entry = entries[args.dataIndex];
-          if (!entry) return "";
+          const { theme, entry }: SelectedData = args.data[2];
+          if (!isHoverDevice) {
+            props.setSelected({ theme, entry });
+            return "";
+          }
+          const datetime = entry.entry_created_datetime.slice(0, 10);
           const img = entry.image_url
-            ? `<img src="https://stat.ameba.jp${entry.image_url}?cpd=200" height="200" width="200" />`
-            : "(no image available)";
+            ? `<img src="https://stat.ameba.jp${entry.image_url}?cpd=100" height="100" width="100" />`
+            : "<span>(no image)<span>";
           return `
-            <span style="font-size: 1.1rem;" >${entry.entry_title}</span>
-            <table>
-              <tbody>
-                <tr>
-                  <td>theme: </td>
-                  <td>${theme.theme_name}</td>
-                </tr>
-                <tr>
-                  <td>date: </td>
-                  <td>${entry.entry_created_datetime.slice(0, 10)}</td>
-                </tr>
-                <tr>
-                  <td>${COUNT_TYPE_TO_NAME[props.countType]}: </td>
-                  <td>${entry[props.countType]}</td>
-                </tr>
-              </tbody>
-            </table>
-            ${img}
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; width: 200px">
+              <span style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">
+                ${entry.entry_title}
+              </span>
+              <span style="color: gray">
+                ${theme.theme_name} · ${datetime} (${entry[props.countType]})
+              </span>
+              ${img}
+            </div>
           `;
         },
       },
       dataZoom: [
         {
           type: "inside",
+          moveOnMouseMove: isHoverDevice,
           startValue: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
           endValue: new Date(),
         },
@@ -325,7 +335,7 @@ function Chart(props: {
       ],
     };
     return option;
-  }, [props.countType, themesDep]);
+  }, [props.countType, themesDep, isHoverDevice]);
 
   return (
     <EchartsWrapper
@@ -375,4 +385,22 @@ function useEntries(themes: ThemeData[]) {
       },
     })),
   });
+}
+
+function useIsHoverDevice(): boolean {
+  const [ok, setOk] = React.useState(true);
+  React.useEffect(() => {
+    const query = window.matchMedia(
+      "(any-hover: hover) and (any-pointer: fine)"
+    );
+    const handler = (e: { matches: boolean }) => {
+      setOk(e.matches);
+    };
+    handler(query);
+    query.addEventListener("change", handler);
+    return () => {
+      query.addEventListener("change", handler);
+    };
+  }, []);
+  return ok;
 }
