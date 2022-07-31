@@ -148,7 +148,7 @@ export default function PageComponent() {
           <NoSSR fallback={<div style={{ height: "38px" }}></div>}>
             <ReactSelect
               isMulti
-              placeholder="Enter IDs"
+              placeholder="Select Themes"
               value={selectedThemes.map((t) => ({
                 label: t.theme_name,
                 value: t,
@@ -237,15 +237,8 @@ function Chart(props: {
   React.useEffect(() => {
     if (chart) {
       const handler = (args: any) => {
-        console.log(args);
-        const { theme, entries } = props.themes[args.seriesIndex];
-        const entry = entries[args.dataIndex];
-        console.log("click", { theme, entry });
-        if (!entry) {
-          props.setSelected(undefined);
-        } else {
-          props.setSelected({ theme, entry });
-        }
+        const selected: SelectedData = args.data[2];
+        props.setSelected(selected);
       };
       chart.on("click", handler);
       return () => {
@@ -275,18 +268,21 @@ function Chart(props: {
         name: theme.theme_name,
         type: "line",
         symbol: "circle",
-        data: entries.map((e) => [
-          new Date(e.entry_created_datetime),
-          e[props.countType],
-        ]),
+        data: entries.map(
+          (entry) =>
+            [
+              new Date(entry.entry_created_datetime),
+              entry[props.countType],
+              // sneak-in the data for click and tooltip
+              { theme, entry },
+            ] as any
+        ),
       })),
       legend: {},
       tooltip: {
         trigger: "axis",
         formatter: ([args]: any) => {
-          const { theme, entries } = props.themes[args.seriesIndex];
-          const entry = entries[args.dataIndex];
-          if (!entry) return "";
+          const { theme, entry }: SelectedData = args.data[2];
           const img = entry.image_url
             ? `<img src="https://stat.ameba.jp${entry.image_url}?cpd=200" height="200" width="200" />`
             : "(no image available)";
