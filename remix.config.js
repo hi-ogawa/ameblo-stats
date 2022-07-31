@@ -4,4 +4,5 @@ const env = process.env.NODE_ENV ?? "development";
 module.exports = {
   serverBuildPath: `build/remix/${env}/server/index.js`,
   assetsBuildDirectory: `build/remix/${env}/public/build`,
+  server: process.env.BUILD_SERVER,
 };
