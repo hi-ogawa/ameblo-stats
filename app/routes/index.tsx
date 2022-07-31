@@ -280,12 +280,15 @@ function Chart(props: {
         name: theme.theme_name,
         type: "line",
         symbol: "circle",
+        emphasis: {
+          disabled: true,
+        },
         data: entries.map(
           (entry) =>
             [
               new Date(entry.entry_created_datetime),
               entry[props.countType],
-              // sneak-in the data for click and tooltip
+              // sneak in raw data for click and tooltip
               { theme, entry },
             ] as any
         ),
@@ -297,6 +300,10 @@ function Chart(props: {
         // position: "inside",
         formatter: ([args]: any) => {
           const { theme, entry }: SelectedData = args.data[2];
+          if (!isHoverDevice) {
+            props.setSelected({ theme, entry });
+            return "";
+          }
           const datetime = entry.entry_created_datetime.slice(0, 10);
           const img = entry.image_url
             ? `<img src="https://stat.ameba.jp${entry.image_url}?cpd=100" height="100" width="100" />`
