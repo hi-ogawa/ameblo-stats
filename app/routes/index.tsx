@@ -85,7 +85,7 @@ export default function PageComponent() {
   // fetch stats
   //
   const entryQueries = useEntries(selectedThemes);
-  // invalidate effect based on the query result identity
+  // invalidation key for query result
   const entryQueriesDep = JSON.stringify(
     zip(selectedThemes, entryQueries).map(([t, q]) => [
       t?.amebaId,
