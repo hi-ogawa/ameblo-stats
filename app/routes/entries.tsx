@@ -1,6 +1,7 @@
 import { LoaderFunction, json } from "@remix-run/server-runtime";
 import { z } from "zod";
 import { Entry, fetchEntries } from "../utils/ameblo";
+import { CACHE_CONTROL } from "../utils/cache-control";
 import { parseQuery } from "../utils/loader-utils";
 
 const REQ_SCHEME = z.object({
@@ -14,5 +15,5 @@ export const loader: LoaderFunction = async ({ request }) => {
   const query = REQ_SCHEME.parse(parseQuery(request));
   const { amebaId, themeId } = query;
   const data: EntriesResponse = await fetchEntries(amebaId, themeId);
-  return json(data);
+  return json(data, { headers: CACHE_CONTROL });
 };
