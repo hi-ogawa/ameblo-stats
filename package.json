@@ -25,6 +25,7 @@
     "@remix-run/react": "^1.6.7",
     "@remix-run/server-runtime": "^1.6.7",
     "@tanstack/react-query": "^4.0.10",
+    "@tanstack/react-virtual": "3.0.0-beta.17",
     "echarts": "^5.3.3",
     "lodash": "^4.17.21",
     "qs": "^6.11.0",

@@ -9,6 +9,7 @@ specifiers:
   '@remix-run/server-runtime': ^1.6.7
   '@remix-run/vercel': ^1.6.7
   '@tanstack/react-query': ^4.0.10
+  '@tanstack/react-virtual': 3.0.0-beta.17
   '@types/lodash': ^4.14.182
   '@types/node': ^16
   '@types/qs': ^6.9.7
@@ -40,6 +41,7 @@ dependencies:
   '@remix-run/react': 1.6.7_biqbaboplfbrettd7655fr4n2y
   '@remix-run/server-runtime': 1.6.7_biqbaboplfbrettd7655fr4n2y
   '@tanstack/react-query': 4.0.10_biqbaboplfbrettd7655fr4n2y
+  '@tanstack/react-virtual': 3.0.0-beta.17_react@18.2.0
   echarts: 5.3.3
   lodash: 4.17.21
   qs: 6.11.0
@@ -1752,6 +1754,21 @@ packages:
       react: 18.2.0
       react-dom: 18.2.0_react@18.2.0
       use-sync-external-store: 1.2.0_react@18.2.0
+    dev: false
+
+  /@tanstack/react-virtual/3.0.0-beta.17_react@18.2.0:
+    resolution: {integrity: sha512-Rgy/D5cWf+q12XxR/Jo2lfStL/6FdcqPX5+nMjDkIu2Twfx1zjACvoi3UeieVbQjlZCynRcxw9T0BkhkNHKDjA==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0
+    dependencies:
+      '@tanstack/virtual-core': 3.0.0-beta.17
+      react: 18.2.0
+    dev: false
+
+  /@tanstack/virtual-core/3.0.0-beta.17:
+    resolution: {integrity: sha512-p4bBBwHkBCCDRE8umXtLJ8UGJ03efZj39WklRwTQReVq5JOx7hvvPYY6zN9zRbbGCseNXX95OLgXiggDL657Jw==}
+    engines: {node: '>=12'}
     dev: false
 
   /@types/acorn/4.0.6:
