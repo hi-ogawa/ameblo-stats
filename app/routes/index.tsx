@@ -399,9 +399,7 @@ function Chart(props: {
     if (chart) {
       const handler = () => {
         const views: any[] = (chart as any)._componentsViews;
-        const view = views.find(
-          (v) => v.constructor.name === "SliderZoomView2"
-        );
+        const view = views.find((v) => "dataZoomModel" in v);
         const d0 = view.dataZoomModel.option.startValue;
         const d1 = view.dataZoomModel.option.endValue;
         props.setZoomRange([d0, d1]);
@@ -464,6 +462,7 @@ function Chart(props: {
           const imgSrc = entry.image_url
             ? `https://stat.ameba.jp${entry.image_url}?cpd=200`
             : PLACEHOLDER_IMAGE_URL;
+          // TODO: image flickers on production build when moving tooltip
           const img = `<img src="${imgSrc}" style="width: 200px; height: 200px; object-fit: cover;" />`;
           return `
             <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; width: 250px">
