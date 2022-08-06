@@ -409,7 +409,7 @@ function Chart(props: {
 }) {
   const [chart, setChart] = React.useState<echarts.ECharts>();
 
-  // extract zoom range and tooltip position by hacking the internal
+  // extract tooltip position by hacking the internal
   React.useEffect(() => {
     if (chart) {
       const handleTooltipPosition = () => {
@@ -468,9 +468,11 @@ function Chart(props: {
       legend: {},
       tooltip: {
         trigger: "axis",
-        // hide tooltip on mobile
-        show: isHoverDevice,
         formatter: ([args]: any) => {
+          // hide tooltip on mobile since layout becomes odd (NOTE: cannot use `show: isHoverDevice` since we use the existence of tooltip for `handleTooltipPosition` above)
+          if (!isHoverDevice) {
+            return "";
+          }
           const { theme, entry }: SelectedData = args.data[2];
           const datetime = entry.entry_created_datetime.slice(0, 10);
           const imgSrc = entry.image_url
@@ -495,12 +497,12 @@ function Chart(props: {
         {
           type: "inside",
           moveOnMouseMove: isHoverDevice,
-          // default range is between a month ago and now
-          startValue: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          // this year as a default range
+          startValue: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
           endValue: new Date(),
         },
         {
-          startValue: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          startValue: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
           endValue: new Date(),
         },
       ],
