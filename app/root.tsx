@@ -32,6 +32,7 @@ function Providers(props: React.PropsWithChildren) {
           queries: {
             refetchOnWindowFocus: false,
             refetchOnReconnect: false,
+            retry: 0,
           },
         },
       })
