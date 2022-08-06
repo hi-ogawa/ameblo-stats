@@ -105,31 +105,11 @@ export default function PageComponent() {
     return entries;
   }, [entryQueriesDep]);
 
-  // selected data on chart
-  const [selectedRaw, setSelected] = React.useState<SelectedData>();
-  const selected = useDebounce(selectedRaw, 300);
-
+  //
   // track chart zoom range to synchronize thumbnail grid
+  //
   const [zoomRangeRaw, setZoomRange] = React.useState<[number, number]>();
   const zoomRange = useDebounce(zoomRangeRaw, 300, JSON.stringify);
-
-  // scroll thumbnail grid based on tooltip
-  React.useEffect(() => {
-    if (selected) {
-      const index = flattenEntries.findIndex(
-        (e) => e.entry.entry_id === selected.entry.entry_id
-      );
-      if (index >= 0) {
-        const scrollable = document.querySelector(
-          "#--thumbnail-grid-scrollable--"
-        )!;
-        const target = scrollable.querySelector(
-          `div > :nth-child(${index + 1})`
-        )!;
-        scrollToTarget(scrollable as any, target as any);
-      }
-    }
-  }, [selected]);
 
   //
   // virtualize list
@@ -281,18 +261,11 @@ export default function PageComponent() {
         <Chart
           countType={countType}
           themes={themeEntries}
-          setSelected={setSelected}
           setZoomRange={setZoomRange}
         />
       </div>
       <section>
-        <div
-          ref={scrollableRef}
-          style={{
-            overflowX: "auto",
-          }}
-          id="--thumbnail-grid-scrollable--"
-        >
+        <div ref={scrollableRef} style={{ overflowX: "auto" }}>
           <div
             style={{
               // layout virtual container
@@ -368,85 +341,10 @@ export default function PageComponent() {
                 </div>
               );
             })}
-            {/* <ThumbnailGridInner
-              entries={flattenEntries}
-              countType={countType}
-              selectedEntryId={selected?.entry.entry_id}
-              rangeStart={zoomRange?.[0]}
-              rangeEnd={zoomRange?.[1]}
-            /> */}
           </div>
         </div>
       </section>
     </div>
-  );
-}
-
-const ThumbnailGridInner = React.memo(ThumbnailGridInnerImpl);
-ThumbnailGridInner;
-
-function ThumbnailGridInnerImpl(props: {
-  entries: { theme: ThemeData; entry: Entry; themeIndex: number }[];
-  countType: CountType;
-  selectedEntryId?: number;
-  rangeStart?: number;
-  rangeEnd?: number;
-}) {
-  // const entries = [...props.entries].reverse();
-  const entries = props.entries;
-  // props.rangeStart
-  // const entries = props.entries.filter(
-  //   (e) =>
-  //     !(props.rangeStart && props.rangeEnd) ||
-  //     (props.rangeStart <= new Date(e.entry.entry_created_datetime).getTime() &&
-  //       props.rangeEnd >= new Date(e.entry.entry_created_datetime).getTime())
-  // );
-  return (
-    <>
-      {entries.map(({ theme, entry, themeIndex }) => (
-        <a
-          key={entry.entry_id}
-          style={{
-            position: "relative",
-            overflow: "hidden",
-            width: "100px",
-            height: "100px",
-            border: `3px solid ${THEME_COLORS[themeIndex]}`,
-          }}
-          href={`https://ameblo.jp/${theme.amebaId}/entry-${entry.entry_id}.html`}
-          target="_blank"
-          title={entry.entry_title}
-        >
-          {/* TODO: lazy load on viewport? */}
-          <img
-            src={
-              entry.image_url
-                ? `https://stat.ameba.jp${entry.image_url}?cpd=100`
-                : PLACEHOLDER_IMAGE_URL
-            }
-            style={{
-              width: "100px",
-              height: "100px",
-              objectFit: "cover",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              right: "1px",
-              bottom: "1px",
-              padding: "1px 3px",
-              borderRadius: "4px",
-              background: "rgba(0, 0, 0, 0.75)",
-              color: "#fff",
-              fontSize: "14px",
-            }}
-          >
-            {entry[props.countType]}
-          </div>
-        </a>
-      ))}
-    </>
   );
 }
 
@@ -492,7 +390,6 @@ function CustomAmebaIdOption(props: OptionProps<any>) {
 function Chart(props: {
   themes: { theme: ThemeData; entries: EntriesResponse }[];
   countType: CountType;
-  setSelected: (value?: SelectedData) => void;
   setZoomRange: (value: [number, number]) => void;
 }) {
   const [chart, setChart] = React.useState<echarts.ECharts>();
@@ -611,14 +508,6 @@ function Chart(props: {
 //
 // utils
 //
-
-function scrollToTarget(scrollable: HTMLElement, target: HTMLElement) {
-  const hp = scrollable.clientWidth;
-  const hc = target.clientWidth;
-  const op = scrollable.offsetLeft;
-  const oc = target.offsetLeft;
-  scrollable.scroll({ left: oc - op + hc / 2 - hp / 2, behavior: "smooth" });
-}
 
 // https://github.com/apache/echarts/blob/1fb0d6f1c2d5a6084198bbc2a1b928df66abbaab/src/model/globalDefault.ts#L37-L47
 const THEME_COLORS = [
