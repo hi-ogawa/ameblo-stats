@@ -112,6 +112,14 @@ export default function PageComponent() {
   const zoomRange = useDebounce(zoomRangeRaw, 300, JSON.stringify);
 
   //
+  // track chart tooltip click's x axis value to move thumnail grid
+  //
+  const [selected, setSelected] = React.useState<number>();
+
+  // reset on chart refresh
+  React.useEffect(() => setSelected(undefined), [flattenEntries]);
+
+  //
   // virtualize list
   //
   const scrollableRef = React.useRef<HTMLDivElement>(null);
@@ -130,6 +138,8 @@ export default function PageComponent() {
   }, [flattenEntries]);
 
   React.useEffect(() => {
+    // TODO: `zoomRange` is not used in favor of `selected`
+    if (true as any) return;
     if (zoomRange) {
       const [start, end] = zoomRange;
       const center = (start + end) / 2;
@@ -137,7 +147,6 @@ export default function PageComponent() {
         Math.abs(new Date(e.entry.entry_created_datetime).getTime() - center)
       );
       const centerIndex = flattenEntries.findIndex((e) => e === found);
-      console.log({ zoomRange, centerIndex });
       if (centerIndex >= 0) {
         virtualizer.scrollToIndex(Math.ceil(centerIndex / 4), {
           align: "center",
@@ -146,6 +155,32 @@ export default function PageComponent() {
       }
     }
   }, [JSON.stringify(zoomRange)]);
+
+  React.useEffect(() => {
+    if (selected) {
+      const found = minBy(flattenEntries, (e) =>
+        Math.abs(new Date(e.entry.entry_created_datetime).getTime() - selected)
+      );
+      const index = flattenEntries.findIndex((e) => e === found);
+      if (index >= 0) {
+        // disable smooth if target is too far
+        const target = Math.ceil(index / 4);
+        const first = virtualizer.getVirtualItems().at(0);
+        const last = virtualizer.getVirtualItems().at(-1);
+        const smooth =
+          first &&
+          last &&
+          Math.min(
+            Math.abs(target - first.index),
+            Math.abs(target - last.index)
+          ) < 10;
+        virtualizer.scrollToIndex(target, {
+          align: "center",
+          smoothScroll: smooth,
+        });
+      }
+    }
+  }, [selected]);
 
   return (
     <div
@@ -262,6 +297,7 @@ export default function PageComponent() {
           countType={countType}
           themes={themeEntries}
           setZoomRange={setZoomRange}
+          setSelected={setSelected}
         />
       </div>
       <section>
@@ -396,22 +432,35 @@ function Chart(props: {
   themes: { theme: ThemeData; entries: EntriesResponse }[];
   countType: CountType;
   setZoomRange: (value: [number, number]) => void;
+  setSelected: (value?: number) => void;
 }) {
   const [chart, setChart] = React.useState<echarts.ECharts>();
 
-  // extract zoom range by hacking the internal
+  // extract zoom range and tooltip position by hacking the internal
   React.useEffect(() => {
     if (chart) {
-      const handler = () => {
+      const handleZoomRange = () => {
         const views: any[] = (chart as any)._componentsViews;
         const view = views.find((v) => "dataZoomModel" in v);
         const d0 = view.dataZoomModel.option.startValue;
         const d1 = view.dataZoomModel.option.endValue;
         props.setZoomRange([d0, d1]);
       };
-      chart.on("finished", handler);
+      const handleTooltipPosition = () => {
+        const views: any[] = (chart as any)._componentsViews;
+        const view = views.find((v) => v.type === "tooltip");
+        if (view.__alive) {
+          const value = view?._cbParamsList?.[0]?.axisValue;
+          if (value) {
+            props.setSelected(value);
+          }
+        }
+      };
+      chart.on("finished", handleZoomRange);
+      chart.on("click", handleTooltipPosition);
       return () => {
-        chart.off("finished", handler);
+        chart.off("finished", handleZoomRange);
+        chart.off("click", handleTooltipPosition);
       };
     }
     return;
@@ -440,9 +489,7 @@ function Chart(props: {
         name: theme.theme_name,
         type: "line",
         symbol: "none",
-        emphasis: {
-          disabled: true,
-        },
+        triggerLineEvent: true,
         color: THEME_COLORS[i],
         data: entries.map(
           (entry) =>
@@ -457,20 +504,18 @@ function Chart(props: {
       legend: {},
       tooltip: {
         trigger: "axis",
+        // hide tooltip on mobile
+        show: isHoverDevice,
         formatter: ([args]: any) => {
           const { theme, entry }: SelectedData = args.data[2];
-          // hide tooltip on mobile
-          if (!isHoverDevice) {
-            return "";
-          }
           const datetime = entry.entry_created_datetime.slice(0, 10);
           const imgSrc = entry.image_url
             ? `https://stat.ameba.jp${entry.image_url}?cpd=200`
             : PLACEHOLDER_IMAGE_URL;
-          // TODO: image flickers on production build when moving tooltip
+          // NOTE: image flickers during mouseover when devtool is open
           const img = `<img src="${imgSrc}" style="width: 200px; height: 200px; object-fit: cover;" />`;
           return `
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; width: 250px">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; width: 250px;">
               <span style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">
                 ${entry.entry_title}
               </span>
