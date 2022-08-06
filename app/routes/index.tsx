@@ -1,7 +1,7 @@
 import useLocalStorage from "@rehooks/local-storage";
 import { useQueries } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { identity, minBy, sortBy, zip } from "lodash";
+import { minBy, sortBy, zip } from "lodash";
 import React from "react";
 import { useForm } from "react-hook-form";
 import ReactSelect, { OptionProps, components } from "react-select";
@@ -106,20 +106,6 @@ export default function PageComponent() {
   }, [entryQueriesDep]);
 
   //
-  // track chart zoom range to synchronize thumbnail grid
-  //
-  const [zoomRangeRaw, setZoomRange] = React.useState<[number, number]>();
-  const zoomRange = useDebounce(zoomRangeRaw, 300, JSON.stringify);
-
-  //
-  // track chart tooltip click's x axis value to move thumnail grid
-  //
-  const [selected, setSelected] = React.useState<number>();
-
-  // reset on chart refresh
-  React.useEffect(() => setSelected(undefined), [flattenEntries]);
-
-  //
   // virtualize list
   //
   const scrollableRef = React.useRef<HTMLDivElement>(null);
@@ -137,24 +123,13 @@ export default function PageComponent() {
     scrollableRef.current?.scroll({ left: virtualizer.getTotalSize() });
   }, [flattenEntries]);
 
-  React.useEffect(() => {
-    // TODO: `zoomRange` is not used in favor of `selected`
-    if (true as any) return;
-    if (zoomRange) {
-      const [start, end] = zoomRange;
-      const center = (start + end) / 2;
-      const found = minBy(flattenEntries, (e) =>
-        Math.abs(new Date(e.entry.entry_created_datetime).getTime() - center)
-      );
-      const centerIndex = flattenEntries.findIndex((e) => e === found);
-      if (centerIndex >= 0) {
-        virtualizer.scrollToIndex(Math.ceil(centerIndex / 4), {
-          align: "center",
-          smoothScroll: true,
-        });
-      }
-    }
-  }, [JSON.stringify(zoomRange)]);
+  //
+  // scroll list on chart click
+  //
+  const [selected, setSelected] = React.useState<number>();
+
+  // reset on chart refresh
+  React.useEffect(() => setSelected(undefined), [flattenEntries]);
 
   React.useEffect(() => {
     if (selected) {
@@ -296,7 +271,6 @@ export default function PageComponent() {
         <Chart
           countType={countType}
           themes={themeEntries}
-          setZoomRange={setZoomRange}
           setSelected={setSelected}
         />
       </div>
@@ -431,7 +405,6 @@ function CustomAmebaIdOption(props: OptionProps<any>) {
 function Chart(props: {
   themes: { theme: ThemeData; entries: EntriesResponse }[];
   countType: CountType;
-  setZoomRange: (value: [number, number]) => void;
   setSelected: (value?: number) => void;
 }) {
   const [chart, setChart] = React.useState<echarts.ECharts>();
@@ -439,13 +412,6 @@ function Chart(props: {
   // extract zoom range and tooltip position by hacking the internal
   React.useEffect(() => {
     if (chart) {
-      const handleZoomRange = () => {
-        const views: any[] = (chart as any)._componentsViews;
-        const view = views.find((v) => "dataZoomModel" in v);
-        const d0 = view.dataZoomModel.option.startValue;
-        const d1 = view.dataZoomModel.option.endValue;
-        props.setZoomRange([d0, d1]);
-      };
       const handleTooltipPosition = () => {
         const views: any[] = (chart as any)._componentsViews;
         const view = views.find((v) => v.type === "tooltip");
@@ -456,10 +422,8 @@ function Chart(props: {
           }
         }
       };
-      chart.on("finished", handleZoomRange);
       chart.on("click", handleTooltipPosition);
       return () => {
-        chart.off("finished", handleZoomRange);
         chart.off("click", handleTooltipPosition);
       };
     }
@@ -631,23 +595,4 @@ function useIsHoverDevice(): boolean {
     };
   }, []);
   return ok;
-}
-
-function useDebounce<T>(
-  value: T,
-  msec: number,
-  toDep: (value: T) => any = identity
-): T {
-  const [debouncedValue, setDebouncedValue] = React.useState(value);
-
-  React.useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      setDebouncedValue(value);
-    }, msec);
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [toDep(value), msec]);
-
-  return debouncedValue;
 }
