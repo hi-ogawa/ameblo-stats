@@ -308,7 +308,12 @@ export default function PageComponent() {
                       }}
                       href={`https://ameblo.jp/${theme.amebaId}/entry-${entry.entry_id}.html`}
                       target="_blank"
-                      title={entry.entry_title}
+                      title={
+                        entry.entry_title +
+                        " (" +
+                        entry.entry_created_datetime.slice(0, 10) +
+                        ")"
+                      }
                     >
                       <img
                         src={
