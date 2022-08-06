@@ -1,8 +1,9 @@
+import useLocalStorage from "@rehooks/local-storage";
 import { useQueries } from "@tanstack/react-query";
 import { sortBy, zip } from "lodash";
 import React from "react";
 import { useForm } from "react-hook-form";
-import ReactSelect from "react-select";
+import ReactSelect, { OptionProps, components } from "react-select";
 import ReactSelectCreatable from "react-select/creatable";
 import { EchartsWrapper } from "../components/echarts-wrapper";
 import { NoSSR } from "../components/no-ssr";
@@ -23,12 +24,6 @@ import { ThemesResponse } from "./themes";
 // components
 //
 
-const DEFAULT_AMEBA_ID_OPTIONS = [
-  "ocha-norma",
-  "juicejuice-official",
-  "morningmusume-9ki",
-];
-
 interface FormType {
   amebaIds: string[];
   selectedThemes: ThemeData[];
@@ -41,12 +36,15 @@ interface SelectedData {
 }
 
 export default function PageComponent() {
+  // persist ameba ids users have entered
+  const [amebaIdOptions, setAmebaIdOptions] = usePersistedAmebaIdOptions();
+
   const form = useForm<FormType>({
     // pre-fill inputs for quick development
     defaultValues:
       process.env.NODE_ENV == "development"
         ? {
-            amebaIds: ["ocha-norma", "juicejuice-official"] as string[],
+            amebaIds: ["ocha-norma"],
             selectedThemes: [
               {
                 amebaId: "ocha-norma",
@@ -162,11 +160,18 @@ export default function PageComponent() {
             <ReactSelectCreatable
               isMulti
               placeholder="Enter IDs"
+              components={{ Option: CustomAmebaIdOption }}
               value={amebaIds.map((value) => ({ label: value, value }))}
-              options={DEFAULT_AMEBA_ID_OPTIONS.map((value) => ({
+              options={amebaIdOptions.map((value) => ({
                 label: value,
                 value,
               }))}
+              onCreateOption={(created) => {
+                form.setValue("amebaIds", [...amebaIds, created]);
+                if (!amebaIdOptions.includes(created)) {
+                  setAmebaIdOptions([...amebaIdOptions, created]);
+                }
+              }}
               onChange={(selected) => {
                 form.setValue(
                   "amebaIds",
@@ -320,6 +325,45 @@ function ThumbnailGridInnerImpl(props: {
   );
 }
 
+function CustomAmebaIdOption(props: OptionProps<any>) {
+  const [amebaIdOptions, setAmebaIdOptions] = usePersistedAmebaIdOptions();
+  return (
+    <div style={{ display: "flex", alignItems: "center" }}>
+      <components.Option {...props} />
+      <span
+        style={{
+          flex: "none",
+          cursor: "pointer",
+          margin: "0 4px",
+          color: "#444",
+          transform: "scale(0.8)",
+        }}
+        onClick={(e) => {
+          e.preventDefault();
+          const idToRemove = (props as any).value;
+          setAmebaIdOptions(amebaIdOptions.filter((id) => id !== idToRemove));
+        }}
+      >
+        {/* https://feathericons.com/?query=close */}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </span>
+    </div>
+  );
+}
+
 function Chart(props: {
   themes: { theme: ThemeData; entries: EntriesResponse }[];
   countType: CountType;
@@ -431,6 +475,10 @@ function scrollToTarget(scrollable: HTMLElement, target: HTMLElement) {
 //
 // hooks
 //
+
+function usePersistedAmebaIdOptions() {
+  return useLocalStorage<string[]>("ameba-id-options-v1", []);
+}
 
 function useThemes(amebaIds: string[]) {
   return useQueries({
