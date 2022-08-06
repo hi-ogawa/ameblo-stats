@@ -108,6 +108,9 @@ export default function PageComponent() {
   const [selectedRaw, setSelected] = React.useState<SelectedData>();
   const selected = useDebounce(selectedRaw, 300);
 
+  // track chart zoom range to synchronize thumbnail grid
+  const [zoomRange, setZoomRange] = React.useState<[number, number]>();
+
   // scroll thumbnail grid based on tooltip
   React.useEffect(() => {
     if (selected) {
@@ -241,6 +244,7 @@ export default function PageComponent() {
           countType={countType}
           themes={themeEntries}
           setSelected={setSelected}
+          setZoomRange={setZoomRange}
         />
       </div>
       {/* TODO: virtual list */}
@@ -252,12 +256,15 @@ export default function PageComponent() {
               gridAutoFlow: "column",
               gridTemplateRows: "repeat(4, 1fr)",
               gap: "8px",
+              // direction: "rtl",
             }}
           >
             <ThumbnailGridInner
               entries={flattenEntries}
               countType={countType}
               selectedEntryId={selected?.entry.entry_id}
+              rangeStart={zoomRange?.[0]}
+              rangeEnd={zoomRange?.[1]}
             />
           </div>
         </div>
@@ -272,10 +279,21 @@ function ThumbnailGridInnerImpl(props: {
   entries: { theme: ThemeData; entry: Entry; themeIndex: number }[];
   countType: CountType;
   selectedEntryId?: number;
+  rangeStart?: number;
+  rangeEnd?: number;
 }) {
+  // const entries = [...props.entries].reverse();
+  const entries = props.entries;
+  // props.rangeStart
+  // const entries = props.entries.filter(
+  //   (e) =>
+  //     !(props.rangeStart && props.rangeEnd) ||
+  //     (props.rangeStart <= new Date(e.entry.entry_created_datetime).getTime() &&
+  //       props.rangeEnd >= new Date(e.entry.entry_created_datetime).getTime())
+  // );
   return (
     <>
-      {props.entries.map(({ theme, entry, themeIndex }) => (
+      {entries.map(({ theme, entry, themeIndex }) => (
         <a
           key={entry.entry_id}
           style={{
@@ -365,19 +383,25 @@ function Chart(props: {
   themes: { theme: ThemeData; entries: EntriesResponse }[];
   countType: CountType;
   setSelected: (value?: SelectedData) => void;
+  setZoomRange: (value: [number, number]) => void;
 }) {
   const [chart, setChart] = React.useState<echarts.ECharts>();
 
   React.useEffect(() => {
     if (chart) {
-      // callback when tooltip moves
-      const handler = (args: any) => {
-        console.log(args, chart);
+      const handler = () => {
+        // extract zoom range by hacking the internal
+        const views: any[] = (chart as any)._componentsViews;
+        const view = views.find(
+          (v) => v.constructor.name === "SliderZoomView2"
+        );
+        const d0 = view.dataZoomModel.option.startValue;
+        const d1 = view.dataZoomModel.option.endValue;
+        props.setZoomRange([d0, d1]);
       };
-      chart.on("highlight", handler);
-      chart.on("downplay", handler);
+      chart.on("finished", handler);
       return () => {
-        chart.on("highlight", handler);
+        chart.off("finished", handler);
       };
     }
     return;
