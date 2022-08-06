@@ -1,4 +1,5 @@
 import { useQueries } from "@tanstack/react-query";
+import { sortBy, zip } from "lodash";
 import React from "react";
 import { useForm } from "react-hook-form";
 import ReactSelect from "react-select";
@@ -14,6 +15,7 @@ import {
   ThemeData,
 } from "../utils/ameblo";
 import { fetchJson, isTruthy } from "../utils/misc";
+import { PLACEHOLDER_IMAGE_URL } from "../utils/placeholder";
 import { EntriesResponse } from "./entries";
 import { ThemesResponse } from "./themes";
 
@@ -84,9 +86,47 @@ export default function PageComponent() {
   // fetch stats
   //
   const entryQueries = useEntries(selectedThemes);
+  // invalidate effect based on the query result identity
+  const entryQueriesDep = JSON.stringify(
+    zip(selectedThemes, entryQueries).map(([t, q]) => [
+      t?.amebaId,
+      t?.theme_id,
+      q?.status,
+    ])
+  );
+  const themeEntries = React.useMemo(
+    () => entryQueries.map((q) => q.isSuccess && q.data).filter(isTruthy),
+    [entryQueriesDep]
+  );
+  const flattenEntries = React.useMemo(() => {
+    let entries = themeEntries.flatMap(({ theme, entries }) =>
+      entries.map((entry) => ({ theme, entry }))
+    );
+    entries = sortBy(entries, (e) => e.entry.entry_created_datetime);
+    return entries;
+  }, [entryQueriesDep]);
 
   // selected data on chart
-  const [selected, setSelected] = React.useState<SelectedData>();
+  const [selectedRaw, setSelected] = React.useState<SelectedData>();
+  const selected = useDebounce(selectedRaw, 300);
+
+  // scroll thumbnail grid based on tooltip
+  React.useEffect(() => {
+    if (selected) {
+      const index = flattenEntries.findIndex(
+        (e) => e.entry.entry_id === selected.entry.entry_id
+      );
+      if (index >= 0) {
+        const scrollable = document.querySelector(
+          "#--thumbnail-grid-scrollable--"
+        )!;
+        const target = scrollable.querySelector(
+          `div > :nth-child(${index + 1})`
+        )!;
+        scrollToTarget(scrollable as any, target as any);
+      }
+    }
+  }, [selected]);
 
   return (
     <div
@@ -96,6 +136,7 @@ export default function PageComponent() {
         gap: "1rem",
       }}
     >
+      {/* TODO: make "form" hideable (e.g. sidebar) */}
       <div
         style={{
           width: "800px",
@@ -193,43 +234,89 @@ export default function PageComponent() {
         )}
         <Chart
           countType={countType}
-          themes={entryQueries
-            .map((q) => q.isSuccess && q.data)
-            .filter(isTruthy)}
+          themes={themeEntries}
           setSelected={setSelected}
         />
       </div>
-      {selected && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "0.5rem",
-            margin: "0 auto",
-          }}
-        >
-          <a
-            href={`https://ameblo.jp/${selected.theme.amebaId}/entry-${selected.entry.entry_id}.html`}
-            target="_blank"
-            style={{ fontSize: "1.2rem" }}
+      {/* TODO: virtual list */}
+      <section style={{}}>
+        <div style={{ overflowX: "auto" }} id="--thumbnail-grid-scrollable--">
+          <div
+            style={{
+              display: "grid",
+              gridAutoFlow: "column",
+              gridTemplateRows: "repeat(4, 1fr)",
+              gap: "8px",
+            }}
           >
-            {selected.entry.entry_title}
-          </a>
-          <span>
-            {selected.theme.theme_name} ·{" "}
-            {selected.entry.entry_created_datetime.slice(0, 10)}
-          </span>
-          {selected.entry.image_url && (
-            <img
-              src={`https://stat.ameba.jp${selected.entry.image_url}?cpd=300`}
-              height="300"
-              width="300"
+            {/* TODO: highlight "selected" entry */}
+            <ThumbnailGridInner
+              entries={flattenEntries}
+              countType={countType}
+              selectedEntryId={selected?.entry.entry_id}
             />
-          )}
+          </div>
         </div>
-      )}
+      </section>
     </div>
+  );
+}
+
+const ThumbnailGridInner = React.memo(ThumbnailGridInnerImpl);
+function ThumbnailGridInnerImpl(props: {
+  entries: { theme: ThemeData; entry: Entry }[];
+  countType: CountType;
+  selectedEntryId?: number;
+}) {
+  // TODO: color border by chart line color?
+  return (
+    <>
+      {props.entries.map(({ theme, entry }) => (
+        <a
+          key={entry.entry_id}
+          style={{
+            position: "relative",
+            // TODO: better way to highlight "selected" entry
+            transitionProperty: "filter",
+            transitionDuration: "300ms",
+            ...(entry.entry_id === props.selectedEntryId
+              ? { filter: "brightness(1.2)" }
+              : {}),
+          }}
+          href={`https://ameblo.jp/${theme.amebaId}/entry-${entry.entry_id}.html`}
+          target="_blank"
+          title={entry.entry_title}
+        >
+          {/* TODO: lazy load on viewport? */}
+          <img
+            src={
+              entry.image_url
+                ? `https://stat.ameba.jp${entry.image_url}?cpd=100`
+                : PLACEHOLDER_IMAGE_URL
+            }
+            style={{
+              width: "100px",
+              height: "100px",
+              objectFit: "cover",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              right: "2px",
+              bottom: "4px",
+              padding: "2px 4px",
+              borderRadius: "4px",
+              background: "rgba(0, 0, 0, 0.75)",
+              color: "#fff",
+              fontSize: "14px",
+            }}
+          >
+            {entry[props.countType]}
+          </div>
+        </a>
+      ))}
+    </>
   );
 }
 
@@ -238,33 +325,16 @@ function Chart(props: {
   countType: CountType;
   setSelected: (value?: SelectedData) => void;
 }) {
-  const [chart, setChart] = React.useState<echarts.ECharts>();
-  const themesDep = props.themes
-    .map((t) => t.theme.amebaId + "#" + t.theme.theme_id)
-    .join("@");
+  const [_chart, setChart] = React.useState<echarts.ECharts>();
 
   // tweak dataZoom for mobile
   const isHoverDevice = useIsHoverDevice();
-
-  React.useEffect(() => {
-    if (chart) {
-      const handler = (args: any) => {
-        const selected: SelectedData = args.data[2];
-        props.setSelected(selected);
-      };
-      chart.on("click", handler);
-      return () => {
-        chart.off("click", handler);
-      };
-    }
-    return;
-  }, [chart, props.countType, themesDep]);
 
   const option = React.useMemo(() => {
     const option: echarts.EChartsOption = {
       grid: {
         containLabel: true,
-        bottom: "10%",
+        bottom: "45px",
         left: "2%",
         right: "2%",
         top: "5%",
@@ -279,7 +349,7 @@ function Chart(props: {
       series: props.themes.map(({ theme, entries }) => ({
         name: theme.theme_name,
         type: "line",
-        symbol: "circle",
+        symbol: "none",
         emphasis: {
           disabled: true,
         },
@@ -296,18 +366,18 @@ function Chart(props: {
       legend: {},
       tooltip: {
         trigger: "axis",
-        // TODO: tooltip position is not good on mobile
-        // position: "inside",
         formatter: ([args]: any) => {
           const { theme, entry }: SelectedData = args.data[2];
+          props.setSelected({ theme, entry });
+          // hide tooltip on mobile
           if (!isHoverDevice) {
-            props.setSelected({ theme, entry });
             return "";
           }
           const datetime = entry.entry_created_datetime.slice(0, 10);
-          const img = entry.image_url
-            ? `<img src="https://stat.ameba.jp${entry.image_url}?cpd=200" height="200" width="200" />`
-            : "<span>(no image)<span>";
+          const imgSrc = entry.image_url
+            ? `https://stat.ameba.jp${entry.image_url}?cpd=200`
+            : PLACEHOLDER_IMAGE_URL;
+          const img = `<img src="${imgSrc}" style="width: 200px; height: 200px; object-fit: cover;" />`;
           return `
             <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; width: 250px">
               <span style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">
@@ -335,15 +405,27 @@ function Chart(props: {
       ],
     };
     return option;
-  }, [props.countType, themesDep, isHoverDevice]);
+  }, [props.countType, props.themes, isHoverDevice]);
 
   return (
     <EchartsWrapper
       option={option}
-      style={{ width: "100%", height: "400px" }}
+      style={{ width: "100%", height: "250px" }}
       setInstance={setChart}
     />
   );
+}
+
+//
+// utils
+//
+
+function scrollToTarget(scrollable: HTMLElement, target: HTMLElement) {
+  const hp = scrollable.clientWidth;
+  const hc = target.clientWidth;
+  const op = scrollable.offsetLeft;
+  const oc = target.offsetLeft;
+  scrollable.scroll({ left: oc - op + hc / 2 - hp / 2, behavior: "smooth" });
 }
 
 //
@@ -403,4 +485,19 @@ function useIsHoverDevice(): boolean {
     };
   }, []);
   return ok;
+}
+
+function useDebounce<T>(value: T, msec: number): T {
+  const [debouncedValue, setDebouncedValue] = React.useState(value);
+
+  React.useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedValue(value);
+    }, msec);
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [value, msec]);
+
+  return debouncedValue;
 }
