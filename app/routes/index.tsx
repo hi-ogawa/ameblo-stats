@@ -394,10 +394,10 @@ function Chart(props: {
 }) {
   const [chart, setChart] = React.useState<echarts.ECharts>();
 
+  // extract zoom range by hacking the internal
   React.useEffect(() => {
     if (chart) {
       const handler = () => {
-        // extract zoom range by hacking the internal
         const views: any[] = (chart as any)._componentsViews;
         const view = views.find(
           (v) => v.constructor.name === "SliderZoomView2"
@@ -456,7 +456,6 @@ function Chart(props: {
         trigger: "axis",
         formatter: ([args]: any) => {
           const { theme, entry }: SelectedData = args.data[2];
-          // props.setSelected({ theme, entry });
           // hide tooltip on mobile
           if (!isHoverDevice) {
             return "";
