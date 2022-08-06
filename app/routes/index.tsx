@@ -1,7 +1,7 @@
 import useLocalStorage from "@rehooks/local-storage";
 import { useQueries } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { sortBy, zip } from "lodash";
+import { identity, minBy, sortBy, zip } from "lodash";
 import React from "react";
 import { useForm } from "react-hook-form";
 import ReactSelect, { OptionProps, components } from "react-select";
@@ -110,8 +110,8 @@ export default function PageComponent() {
   const selected = useDebounce(selectedRaw, 300);
 
   // track chart zoom range to synchronize thumbnail grid
-  const [zoomRange, setZoomRange] = React.useState<[number, number]>();
-  zoomRange;
+  const [zoomRangeRaw, setZoomRange] = React.useState<[number, number]>();
+  const zoomRange = useDebounce(zoomRangeRaw, 300, JSON.stringify);
 
   // scroll thumbnail grid based on tooltip
   React.useEffect(() => {
@@ -131,20 +131,41 @@ export default function PageComponent() {
     }
   }, [selected]);
 
-  // TODO: right to left scroll?
-  // TODO: only rendering two items on initial render?
+  //
+  // virtualize list
+  //
   const scrollableRef = React.useRef<HTMLDivElement>(null);
+
   const virtualizer = useVirtualizer({
     horizontal: true,
     getScrollElement: () => scrollableRef.current,
     count: Math.ceil(flattenEntries.length / 4),
     estimateSize: () => 100 + 6 + 8, // border 3 + margin 4
+    overscan: 10,
   });
 
-  // re-render on entries change?
-  // React.useEffect(() => {
-  //   virtualizer.measure();
-  // }, [flattenEntries]);
+  // TODO: no rtl? https://github.com/TanStack/virtual/issues/282. for now, scroll to the end in order to fake rtl
+  React.useEffect(() => {
+    scrollableRef.current?.scroll({ left: virtualizer.getTotalSize() });
+  }, [flattenEntries]);
+
+  React.useEffect(() => {
+    if (zoomRange) {
+      const [start, end] = zoomRange;
+      const center = (start + end) / 2;
+      const found = minBy(flattenEntries, (e) =>
+        Math.abs(new Date(e.entry.entry_created_datetime).getTime() - center)
+      );
+      const centerIndex = flattenEntries.findIndex((e) => e === found);
+      console.log({ zoomRange, centerIndex });
+      if (centerIndex >= 0) {
+        virtualizer.scrollToIndex(Math.ceil(centerIndex / 4), {
+          align: "center",
+          smoothScroll: true,
+        });
+      }
+    }
+  }, [JSON.stringify(zoomRange)]);
 
   return (
     <div
@@ -267,7 +288,9 @@ export default function PageComponent() {
       <section>
         <div
           ref={scrollableRef}
-          style={{ overflowX: "auto" }}
+          style={{
+            overflowX: "auto",
+          }}
           id="--thumbnail-grid-scrollable--"
         >
           <div
@@ -673,7 +696,11 @@ function useIsHoverDevice(): boolean {
   return ok;
 }
 
-function useDebounce<T>(value: T, msec: number): T {
+function useDebounce<T>(
+  value: T,
+  msec: number,
+  toDep: (value: T) => any = identity
+): T {
   const [debouncedValue, setDebouncedValue] = React.useState(value);
 
   React.useEffect(() => {
@@ -683,7 +710,7 @@ function useDebounce<T>(value: T, msec: number): T {
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [value, msec]);
+  }, [toDep(value), msec]);
 
   return debouncedValue;
 }
