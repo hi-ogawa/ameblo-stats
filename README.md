@@ -14,4 +14,4 @@ npm run deploy:production
 
 ## screenshots
 
-![screenshot](./misc/screenshot.png)
+![image](https://user-images.githubusercontent.com/4232207/183258347-53ddb0f1-4bd0-4221-8b5d-f9ce9d47241f.png)
