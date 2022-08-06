@@ -97,8 +97,8 @@ export default function PageComponent() {
     [entryQueriesDep]
   );
   const flattenEntries = React.useMemo(() => {
-    let entries = themeEntries.flatMap(({ theme, entries }) =>
-      entries.map((entry) => ({ theme, entry }))
+    let entries = themeEntries.flatMap(({ theme, entries }, themeIndex) =>
+      entries.map((entry) => ({ theme, entry, themeIndex }))
     );
     entries = sortBy(entries, (e) => e.entry.entry_created_datetime);
     return entries;
@@ -244,7 +244,7 @@ export default function PageComponent() {
         />
       </div>
       {/* TODO: virtual list */}
-      <section style={{}}>
+      <section>
         <div style={{ overflowX: "auto" }} id="--thumbnail-grid-scrollable--">
           <div
             style={{
@@ -254,7 +254,6 @@ export default function PageComponent() {
               gap: "8px",
             }}
           >
-            {/* TODO: highlight "selected" entry */}
             <ThumbnailGridInner
               entries={flattenEntries}
               countType={countType}
@@ -268,25 +267,23 @@ export default function PageComponent() {
 }
 
 const ThumbnailGridInner = React.memo(ThumbnailGridInnerImpl);
+
 function ThumbnailGridInnerImpl(props: {
-  entries: { theme: ThemeData; entry: Entry }[];
+  entries: { theme: ThemeData; entry: Entry; themeIndex: number }[];
   countType: CountType;
   selectedEntryId?: number;
 }) {
-  // TODO: color border by chart line color?
   return (
     <>
-      {props.entries.map(({ theme, entry }) => (
+      {props.entries.map(({ theme, entry, themeIndex }) => (
         <a
           key={entry.entry_id}
           style={{
             position: "relative",
-            // TODO: better way to highlight "selected" entry
-            transitionProperty: "filter",
-            transitionDuration: "300ms",
-            ...(entry.entry_id === props.selectedEntryId
-              ? { filter: "brightness(1.2)" }
-              : {}),
+            overflow: "hidden",
+            width: "100px",
+            height: "100px",
+            border: `3px solid ${THEME_COLORS[themeIndex]}`,
           }}
           href={`https://ameblo.jp/${theme.amebaId}/entry-${entry.entry_id}.html`}
           target="_blank"
@@ -308,9 +305,9 @@ function ThumbnailGridInnerImpl(props: {
           <div
             style={{
               position: "absolute",
-              right: "2px",
-              bottom: "4px",
-              padding: "2px 4px",
+              right: "1px",
+              bottom: "1px",
+              padding: "1px 3px",
               borderRadius: "4px",
               background: "rgba(0, 0, 0, 0.75)",
               color: "#fff",
@@ -369,7 +366,22 @@ function Chart(props: {
   countType: CountType;
   setSelected: (value?: SelectedData) => void;
 }) {
-  const [_chart, setChart] = React.useState<echarts.ECharts>();
+  const [chart, setChart] = React.useState<echarts.ECharts>();
+
+  React.useEffect(() => {
+    if (chart) {
+      // callback when tooltip moves
+      const handler = (args: any) => {
+        console.log(args, chart);
+      };
+      chart.on("highlight", handler);
+      chart.on("downplay", handler);
+      return () => {
+        chart.on("highlight", handler);
+      };
+    }
+    return;
+  }, [chart, props.countType, props.themes]);
 
   // tweak dataZoom for mobile
   const isHoverDevice = useIsHoverDevice();
@@ -390,13 +402,14 @@ function Chart(props: {
       yAxis: {
         type: "value",
       },
-      series: props.themes.map(({ theme, entries }) => ({
+      series: props.themes.map(({ theme, entries }, i) => ({
         name: theme.theme_name,
         type: "line",
         symbol: "none",
         emphasis: {
           disabled: true,
         },
+        color: THEME_COLORS[i],
         data: entries.map(
           (entry) =>
             [
@@ -412,7 +425,7 @@ function Chart(props: {
         trigger: "axis",
         formatter: ([args]: any) => {
           const { theme, entry }: SelectedData = args.data[2];
-          props.setSelected({ theme, entry });
+          // props.setSelected({ theme, entry });
           // hide tooltip on mobile
           if (!isHoverDevice) {
             return "";
@@ -439,11 +452,12 @@ function Chart(props: {
         {
           type: "inside",
           moveOnMouseMove: isHoverDevice,
-          startValue: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
+          // default range is between a month ago and now
+          startValue: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
           endValue: new Date(),
         },
         {
-          startValue: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
+          startValue: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
           endValue: new Date(),
         },
       ],
@@ -471,6 +485,19 @@ function scrollToTarget(scrollable: HTMLElement, target: HTMLElement) {
   const oc = target.offsetLeft;
   scrollable.scroll({ left: oc - op + hc / 2 - hp / 2, behavior: "smooth" });
 }
+
+// https://github.com/apache/echarts/blob/1fb0d6f1c2d5a6084198bbc2a1b928df66abbaab/src/model/globalDefault.ts#L37-L47
+const THEME_COLORS = [
+  "#5470c6",
+  "#91cc75",
+  "#fac858",
+  "#ee6666",
+  "#73c0de",
+  "#3ba272",
+  "#fc8452",
+  "#9a60b4",
+  "#ea7ccc",
+];
 
 //
 // hooks
