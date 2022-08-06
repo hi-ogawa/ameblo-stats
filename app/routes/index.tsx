@@ -1,5 +1,6 @@
 import useLocalStorage from "@rehooks/local-storage";
 import { useQueries } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { sortBy, zip } from "lodash";
 import React from "react";
 import { useForm } from "react-hook-form";
@@ -110,6 +111,7 @@ export default function PageComponent() {
 
   // track chart zoom range to synchronize thumbnail grid
   const [zoomRange, setZoomRange] = React.useState<[number, number]>();
+  zoomRange;
 
   // scroll thumbnail grid based on tooltip
   React.useEffect(() => {
@@ -128,6 +130,21 @@ export default function PageComponent() {
       }
     }
   }, [selected]);
+
+  // TODO: right to left scroll?
+  // TODO: only rendering two items on initial render?
+  const scrollableRef = React.useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    horizontal: true,
+    getScrollElement: () => scrollableRef.current,
+    count: Math.ceil(flattenEntries.length / 4),
+    estimateSize: () => 100 + 6 + 8, // border 3 + margin 4
+  });
+
+  // re-render on entries change?
+  // React.useEffect(() => {
+  //   virtualizer.measure();
+  // }, [flattenEntries]);
 
   return (
     <div
@@ -247,25 +264,94 @@ export default function PageComponent() {
           setZoomRange={setZoomRange}
         />
       </div>
-      {/* TODO: virtual list */}
       <section>
-        <div style={{ overflowX: "auto" }} id="--thumbnail-grid-scrollable--">
+        <div
+          ref={scrollableRef}
+          style={{ overflowX: "auto" }}
+          id="--thumbnail-grid-scrollable--"
+        >
           <div
             style={{
-              display: "grid",
-              gridAutoFlow: "column",
-              gridTemplateRows: "repeat(4, 1fr)",
-              gap: "8px",
-              // direction: "rtl",
+              // layout virtual container
+              position: "relative",
+              width: `${virtualizer.getTotalSize()}px`,
+              height: (100 + 6) * 4 + 8 * 3,
             }}
           >
-            <ThumbnailGridInner
+            {virtualizer.getVirtualItems().map((item) => {
+              const chunk = flattenEntries.slice(
+                4 * item.index,
+                4 * (item.index + 1)
+              );
+              return (
+                <div
+                  key={item.key}
+                  style={{
+                    // layout virtual item
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    transform: `translateX(${item.start}px)`,
+                    width: 100 + 6,
+                    margin: "0 4px",
+                    // layout inner
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  {chunk.map(({ theme, entry, themeIndex }) => (
+                    <a
+                      key={entry.entry_id}
+                      style={{
+                        position: "relative",
+                        overflow: "hidden",
+                        width: "100px",
+                        height: "100px",
+                        border: `3px solid ${THEME_COLORS[themeIndex]}`,
+                      }}
+                      href={`https://ameblo.jp/${theme.amebaId}/entry-${entry.entry_id}.html`}
+                      target="_blank"
+                      title={entry.entry_title}
+                    >
+                      <img
+                        src={
+                          entry.image_url
+                            ? `https://stat.ameba.jp${entry.image_url}?cpd=100`
+                            : PLACEHOLDER_IMAGE_URL
+                        }
+                        style={{
+                          width: "100px",
+                          height: "100px",
+                          objectFit: "cover",
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: "absolute",
+                          right: "1px",
+                          bottom: "1px",
+                          padding: "1px 3px",
+                          borderRadius: "4px",
+                          background: "rgba(0, 0, 0, 0.75)",
+                          color: "#fff",
+                          fontSize: "14px",
+                        }}
+                      >
+                        {entry[countType]}
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              );
+            })}
+            {/* <ThumbnailGridInner
               entries={flattenEntries}
               countType={countType}
               selectedEntryId={selected?.entry.entry_id}
               rangeStart={zoomRange?.[0]}
               rangeEnd={zoomRange?.[1]}
-            />
+            /> */}
           </div>
         </div>
       </section>
@@ -274,6 +360,7 @@ export default function PageComponent() {
 }
 
 const ThumbnailGridInner = React.memo(ThumbnailGridInnerImpl);
+ThumbnailGridInner;
 
 function ThumbnailGridInnerImpl(props: {
   entries: { theme: ThemeData; entry: Entry; themeIndex: number }[];
