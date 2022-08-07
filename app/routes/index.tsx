@@ -281,7 +281,7 @@ export default function PageComponent() {
               // layout virtual container
               position: "relative",
               width: `${virtualizer.getTotalSize()}px`,
-              height: (100 + 6) * 4 + 8 * 3,
+              height: (100 + 16 + 14 + 4 + 4 + 4 + 6) * 4 + 8 * 3,
             }}
           >
             {virtualizer.getVirtualItems().map((item) => {
@@ -312,19 +312,41 @@ export default function PageComponent() {
                       style={{
                         position: "relative",
                         overflow: "hidden",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        paddingTop: "4px",
+                        gap: "4px",
                         width: "100px",
-                        height: "100px",
+                        height: 100 + 16 + 14 + 4 + 4,
                         border: `3px solid ${THEME_COLORS[themeIndex]}`,
+                        textDecoration: "none",
                       }}
                       href={`https://ameblo.jp/${theme.amebaId}/entry-${entry.entry_id}.html`}
                       target="_blank"
-                      title={
-                        entry.entry_title +
-                        " (" +
-                        entry.entry_created_datetime.slice(0, 10) +
-                        ")"
-                      }
                     >
+                      <span
+                        style={{
+                          color: "#444",
+                          lineHeight: "16px",
+                          fontSize: "14px",
+                          width: "calc(100% - 4px)",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {entry.entry_title}
+                      </span>
+                      <span
+                        style={{
+                          color: "#666",
+                          lineHeight: "14px",
+                          fontSize: "12px",
+                        }}
+                      >
+                        {entry.entry_created_datetime.slice(0, 10)}
+                      </span>
                       <img
                         src={
                           entry.image_url
