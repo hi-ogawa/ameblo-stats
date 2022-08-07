@@ -331,6 +331,11 @@ export default function PageComponent() {
                             ? `https://stat.ameba.jp${entry.image_url}?cpd=100`
                             : PLACEHOLDER_IMAGE_URL
                         }
+                        srcSet={
+                          entry.image_url
+                            ? `https://stat.ameba.jp${entry.image_url}?cpd=100 1x, https://stat.ameba.jp${entry.image_url}?cpd=200 2x`
+                            : undefined
+                        }
                         style={{
                           width: "100px",
                           height: "100px",
