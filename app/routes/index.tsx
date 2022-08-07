@@ -1,7 +1,7 @@
 import useLocalStorage from "@rehooks/local-storage";
 import { useQueries } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { minBy, sortBy, zip } from "lodash";
+import { chunk, minBy, sortBy, zip } from "lodash";
 import React from "react";
 import { useForm } from "react-hook-form";
 import ReactSelect, { OptionProps, components } from "react-select";
@@ -232,6 +232,9 @@ export default function PageComponent() {
   );
 }
 
+const NUM_ROWS = 3;
+const ROW_GAP = 8;
+
 function ThumbnailList(props: {
   themeEntries: {
     theme: ThemeData;
@@ -240,13 +243,15 @@ function ThumbnailList(props: {
   countType: CountType;
   selected?: number;
 }) {
-  const flattenEntries = React.useMemo(() => {
+  const entries = React.useMemo(() => {
     let entries = props.themeEntries.flatMap(({ theme, entries }, themeIndex) =>
       entries.map((entry) => ({ theme, entry, themeIndex }))
     );
     entries = sortBy(entries, (e) => e.entry.entry_created_datetime);
     return entries;
   }, [props.themeEntries]);
+
+  const entryChunks = chunk(entries, NUM_ROWS);
 
   //
   // virtualize list
@@ -256,7 +261,7 @@ function ThumbnailList(props: {
   const virtualizer = useVirtualizer({
     horizontal: true,
     getScrollElement: () => scrollableRef.current,
-    count: Math.ceil(flattenEntries.length / 4),
+    count: entryChunks.length,
     estimateSize: () => 100 + 6 + 8, // border 3 + margin 4
     overscan: 10,
   });
@@ -264,7 +269,7 @@ function ThumbnailList(props: {
   // TODO: no rtl? https://github.com/TanStack/virtual/issues/282. for now, scroll to the end in order to fake rtl
   React.useEffect(() => {
     scrollableRef.current?.scroll({ left: virtualizer.getTotalSize() });
-  }, [flattenEntries]);
+  }, [entries]);
 
   //
   // scroll list based on `selected`
@@ -272,13 +277,13 @@ function ThumbnailList(props: {
   React.useEffect(() => {
     const { selected } = props;
     if (selected) {
-      const found = minBy(flattenEntries, (e) =>
+      const found = minBy(entries, (e) =>
         Math.abs(new Date(e.entry.entry_created_datetime).getTime() - selected)
       );
-      const index = flattenEntries.findIndex((e) => e === found);
+      const index = entries.findIndex((e) => e === found);
       if (index >= 0) {
         // disable smooth if target is too far
-        const target = Math.ceil(index / 4);
+        const target = Math.ceil(index / NUM_ROWS);
         const first = virtualizer.getVirtualItems().at(0);
         const last = virtualizer.getVirtualItems().at(-1);
         const smooth =
@@ -304,14 +309,12 @@ function ThumbnailList(props: {
             // layout virtual container
             position: "relative",
             width: `${virtualizer.getTotalSize()}px`,
-            height: (100 + 16 + 14 + 4 + 4 + 4 + 6) * 4 + 8 * 3,
+            height:
+              (100 + 16 + 14 + 4 + 4 + 4 + 6) * NUM_ROWS +
+              ROW_GAP * (NUM_ROWS - 1),
           }}
         >
           {virtualizer.getVirtualItems().map((item) => {
-            const chunk = flattenEntries.slice(
-              4 * item.index,
-              4 * (item.index + 1)
-            );
             return (
               <div
                 key={item.key}
@@ -326,10 +329,10 @@ function ThumbnailList(props: {
                   // layout inner
                   display: "flex",
                   flexDirection: "column",
-                  gap: "8px",
+                  gap: ROW_GAP,
                 }}
               >
-                {chunk.map(({ theme, entry, themeIndex }) => (
+                {entryChunks[item.index].map(({ theme, entry, themeIndex }) => (
                   <a
                     key={entry.entry_id}
                     style={{
