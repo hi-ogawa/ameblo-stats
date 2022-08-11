@@ -1,7 +1,7 @@
 import useLocalStorage from "@rehooks/local-storage";
 import { useQueries } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { minBy, sortBy, zip } from "lodash";
+import { chunk, minBy, sortBy, zip } from "lodash";
 import React from "react";
 import { useForm } from "react-hook-form";
 import ReactSelect, { OptionProps, components } from "react-select";
@@ -97,65 +97,14 @@ export default function PageComponent() {
     () => entryQueries.map((q) => q.isSuccess && q.data).filter(isTruthy),
     [entryQueriesDep]
   );
-  const flattenEntries = React.useMemo(() => {
-    let entries = themeEntries.flatMap(({ theme, entries }, themeIndex) =>
-      entries.map((entry) => ({ theme, entry, themeIndex }))
-    );
-    entries = sortBy(entries, (e) => e.entry.entry_created_datetime);
-    return entries;
-  }, [entryQueriesDep]);
 
   //
-  // virtualize list
-  //
-  const scrollableRef = React.useRef<HTMLDivElement>(null);
-
-  const virtualizer = useVirtualizer({
-    horizontal: true,
-    getScrollElement: () => scrollableRef.current,
-    count: Math.ceil(flattenEntries.length / 4),
-    estimateSize: () => 100 + 6 + 8, // border 3 + margin 4
-    overscan: 10,
-  });
-
-  // TODO: no rtl? https://github.com/TanStack/virtual/issues/282. for now, scroll to the end in order to fake rtl
-  React.useEffect(() => {
-    scrollableRef.current?.scroll({ left: virtualizer.getTotalSize() });
-  }, [flattenEntries]);
-
-  //
-  // scroll list on chart click
+  // scroll thumbnail list on chart click
   //
   const [selected, setSelected] = React.useState<number>();
 
   // reset on chart refresh
-  React.useEffect(() => setSelected(undefined), [flattenEntries]);
-
-  React.useEffect(() => {
-    if (selected) {
-      const found = minBy(flattenEntries, (e) =>
-        Math.abs(new Date(e.entry.entry_created_datetime).getTime() - selected)
-      );
-      const index = flattenEntries.findIndex((e) => e === found);
-      if (index >= 0) {
-        // disable smooth if target is too far
-        const target = Math.ceil(index / 4);
-        const first = virtualizer.getVirtualItems().at(0);
-        const last = virtualizer.getVirtualItems().at(-1);
-        const smooth =
-          first &&
-          last &&
-          Math.min(
-            Math.abs(target - first.index),
-            Math.abs(target - last.index)
-          ) < 10;
-        virtualizer.scrollToIndex(target, {
-          align: "center",
-          smoothScroll: smooth,
-        });
-      }
-    }
-  }, [selected]);
+  React.useEffect(() => setSelected(undefined), [themeEntries]);
 
   return (
     <div
@@ -274,97 +223,203 @@ export default function PageComponent() {
           setSelected={setSelected}
         />
       </div>
-      <section>
-        <div ref={scrollableRef} style={{ overflowX: "auto" }}>
-          <div
-            style={{
-              // layout virtual container
-              position: "relative",
-              width: `${virtualizer.getTotalSize()}px`,
-              height: (100 + 6) * 4 + 8 * 3,
-            }}
-          >
-            {virtualizer.getVirtualItems().map((item) => {
-              const chunk = flattenEntries.slice(
-                4 * item.index,
-                4 * (item.index + 1)
-              );
-              return (
-                <div
-                  key={item.key}
-                  style={{
-                    // layout virtual item
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    transform: `translateX(${item.start}px)`,
-                    width: 100 + 6,
-                    margin: "0 4px",
-                    // layout inner
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
-                  }}
-                >
-                  {chunk.map(({ theme, entry, themeIndex }) => (
-                    <a
-                      key={entry.entry_id}
-                      style={{
-                        position: "relative",
-                        overflow: "hidden",
-                        width: "100px",
-                        height: "100px",
-                        border: `3px solid ${THEME_COLORS[themeIndex]}`,
-                      }}
-                      href={`https://ameblo.jp/${theme.amebaId}/entry-${entry.entry_id}.html`}
-                      target="_blank"
-                      title={
-                        entry.entry_title +
-                        " (" +
-                        entry.entry_created_datetime.slice(0, 10) +
-                        ")"
-                      }
-                    >
-                      <img
-                        src={
-                          entry.image_url
-                            ? `https://stat.ameba.jp${entry.image_url}?cpd=100`
-                            : PLACEHOLDER_IMAGE_URL
-                        }
-                        srcSet={
-                          entry.image_url
-                            ? `https://stat.ameba.jp${entry.image_url}?cpd=100 1x, https://stat.ameba.jp${entry.image_url}?cpd=200 2x`
-                            : undefined
-                        }
-                        style={{
-                          width: "100px",
-                          height: "100px",
-                          objectFit: "cover",
-                        }}
-                      />
-                      <div
-                        style={{
-                          position: "absolute",
-                          right: "1px",
-                          bottom: "1px",
-                          padding: "1px 3px",
-                          borderRadius: "4px",
-                          background: "rgba(0, 0, 0, 0.75)",
-                          color: "#fff",
-                          fontSize: "14px",
-                        }}
-                      >
-                        {entry[countType]}
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      <ThumbnailList
+        themeEntries={themeEntries}
+        countType={countType}
+        selected={selected}
+      />
     </div>
+  );
+}
+
+// TODO: make it configurable?
+const NUM_ROWS = 3;
+const ROW_GAP = 8;
+const IMAGE_SIZE = 150; // ameblo uses cpd=100, cpd=215, cat=256 (are these expected to be well-cached on CDN?)
+const BORDER_SIZE = 2;
+
+function ThumbnailList(props: {
+  themeEntries: {
+    theme: ThemeData;
+    entries: EntriesResponse;
+  }[];
+  countType: CountType;
+  selected?: number;
+}) {
+  const entries = React.useMemo(() => {
+    let entries = props.themeEntries.flatMap(({ theme, entries }, themeIndex) =>
+      entries.map((entry) => ({ theme, entry, themeIndex }))
+    );
+    entries = sortBy(entries, (e) => e.entry.entry_created_datetime);
+    return entries;
+  }, [props.themeEntries]);
+
+  const entryChunks = chunk(entries, NUM_ROWS);
+
+  //
+  // virtualize list
+  //
+  const scrollableRef = React.useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    horizontal: true,
+    getScrollElement: () => scrollableRef.current,
+    count: entryChunks.length,
+    estimateSize: () => IMAGE_SIZE + 2 * BORDER_SIZE + 8, // border 3 + margin 4
+    overscan: 3,
+  });
+
+  // TODO: no rtl? https://github.com/TanStack/virtual/issues/282. for now, scroll to the end in order to fake rtl
+  React.useEffect(() => {
+    scrollableRef.current?.scroll({ left: virtualizer.getTotalSize() });
+  }, [entries]);
+
+  //
+  // scroll list based on `selected`
+  //
+  React.useEffect(() => {
+    const { selected } = props;
+    if (selected) {
+      const found = minBy(entries, (e) =>
+        Math.abs(new Date(e.entry.entry_created_datetime).getTime() - selected)
+      );
+      const index = entries.findIndex((e) => e === found);
+      if (index >= 0) {
+        // disable smooth if target is too far
+        const target = Math.ceil(index / NUM_ROWS);
+        const first = virtualizer.getVirtualItems().at(0);
+        const last = virtualizer.getVirtualItems().at(-1);
+        const smooth =
+          first &&
+          last &&
+          Math.min(
+            Math.abs(target - first.index),
+            Math.abs(target - last.index)
+          ) < 10;
+        virtualizer.scrollToIndex(target, {
+          align: "center",
+          smoothScroll: smooth,
+        });
+      }
+    }
+  }, [props.selected]);
+
+  return (
+    <section>
+      <div ref={scrollableRef} style={{ overflowX: "auto" }}>
+        <div
+          style={{
+            // layout virtual container
+            position: "relative",
+            width: `${virtualizer.getTotalSize()}px`,
+            height:
+              (IMAGE_SIZE + 16 + 14 + 4 + 4 + 4 + 2 * BORDER_SIZE) * NUM_ROWS +
+              ROW_GAP * (NUM_ROWS - 1),
+          }}
+        >
+          {virtualizer.getVirtualItems().map((item) => {
+            return (
+              <div
+                key={item.key}
+                style={{
+                  // layout virtual item
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  transform: `translateX(${item.start}px)`,
+                  width: IMAGE_SIZE + 2 * BORDER_SIZE,
+                  margin: "0 4px",
+                  // layout inner
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: ROW_GAP,
+                }}
+              >
+                {entryChunks[item.index].map(({ theme, entry, themeIndex }) => (
+                  <a
+                    key={entry.entry_id}
+                    style={{
+                      position: "relative",
+                      overflow: "hidden",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      paddingTop: "4px",
+                      gap: "4px",
+                      width: IMAGE_SIZE,
+                      height: IMAGE_SIZE + 16 + 14 + 4 + 4,
+                      border: `${BORDER_SIZE}px solid ${THEME_COLORS[themeIndex]}`,
+                      textDecoration: "none",
+                    }}
+                    href={`https://ameblo.jp/${theme.amebaId}/entry-${entry.entry_id}.html`}
+                    target="_blank"
+                  >
+                    {/* TODO: can we centerize text with truncate? */}
+                    <span
+                      style={{
+                        color: "#444",
+                        lineHeight: "16px",
+                        fontSize: "14px",
+                        width: "calc(100% - 4px)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {entry.entry_title}
+                    </span>
+                    <span
+                      style={{
+                        color: "#666",
+                        lineHeight: "14px",
+                        fontSize: "12px",
+                      }}
+                    >
+                      {entry.entry_created_datetime.slice(0, 10)}
+                    </span>
+                    <img
+                      src={
+                        entry.image_url
+                          ? `https://stat.ameba.jp${entry.image_url}?cpd=${IMAGE_SIZE}`
+                          : PLACEHOLDER_IMAGE_URL
+                      }
+                      srcSet={
+                        entry.image_url
+                          ? `https://stat.ameba.jp${
+                              entry.image_url
+                            }?cpd=${IMAGE_SIZE} 1x, https://stat.ameba.jp${
+                              entry.image_url
+                            }?cpd=${IMAGE_SIZE * 2} 2x`
+                          : undefined
+                      }
+                      style={{
+                        width: IMAGE_SIZE,
+                        height: IMAGE_SIZE,
+                        objectFit: "cover",
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        right: "1px",
+                        bottom: "1px",
+                        padding: "1px 3px",
+                        borderRadius: "4px",
+                        background: "rgba(0, 0, 0, 0.75)",
+                        color: "#fff",
+                        fontSize: "14px",
+                      }}
+                    >
+                      {entry[props.countType]}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }
 
