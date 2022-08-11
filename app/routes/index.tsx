@@ -232,9 +232,10 @@ export default function PageComponent() {
   );
 }
 
+// TODO: make it configurable?
 const NUM_ROWS = 3;
 const ROW_GAP = 8;
-const IMAGE_SIZE = 150; // ameblo uses cpd=100, cpd=215, cat=256 (are these expected to be cached on CDN?)
+const IMAGE_SIZE = 150; // ameblo uses cpd=100, cpd=215, cat=256 (are these expected to be well-cached on CDN?)
 const BORDER_SIZE = 2;
 
 function ThumbnailList(props: {
@@ -352,6 +353,7 @@ function ThumbnailList(props: {
                     href={`https://ameblo.jp/${theme.amebaId}/entry-${entry.entry_id}.html`}
                     target="_blank"
                   >
+                    {/* TODO: can we centerize text with truncate? */}
                     <span
                       style={{
                         color: "#444",
