@@ -234,6 +234,8 @@ export default function PageComponent() {
 
 const NUM_ROWS = 3;
 const ROW_GAP = 8;
+const IMAGE_SIZE = 150; // ameblo uses cpd=100, cpd=215, cat=256 (are these expected to be cached on CDN?)
+const BORDER_SIZE = 2;
 
 function ThumbnailList(props: {
   themeEntries: {
@@ -262,8 +264,7 @@ function ThumbnailList(props: {
     horizontal: true,
     getScrollElement: () => scrollableRef.current,
     count: entryChunks.length,
-    estimateSize: () => 100 + 6 + 8, // border 3 + margin 4
-    overscan: 10,
+    estimateSize: () => IMAGE_SIZE + 2 * BORDER_SIZE + 8, // border 3 + margin 4
   });
 
   // TODO: no rtl? https://github.com/TanStack/virtual/issues/282. for now, scroll to the end in order to fake rtl
@@ -310,7 +311,7 @@ function ThumbnailList(props: {
             position: "relative",
             width: `${virtualizer.getTotalSize()}px`,
             height:
-              (100 + 16 + 14 + 4 + 4 + 4 + 6) * NUM_ROWS +
+              (IMAGE_SIZE + 16 + 14 + 4 + 4 + 4 + 2 * BORDER_SIZE) * NUM_ROWS +
               ROW_GAP * (NUM_ROWS - 1),
           }}
         >
@@ -324,7 +325,7 @@ function ThumbnailList(props: {
                   top: 0,
                   left: 0,
                   transform: `translateX(${item.start}px)`,
-                  width: 100 + 6,
+                  width: IMAGE_SIZE + 2 * BORDER_SIZE,
                   margin: "0 4px",
                   // layout inner
                   display: "flex",
@@ -343,9 +344,9 @@ function ThumbnailList(props: {
                       alignItems: "center",
                       paddingTop: "4px",
                       gap: "4px",
-                      width: "100px",
-                      height: 100 + 16 + 14 + 4 + 4,
-                      border: `3px solid ${THEME_COLORS[themeIndex]}`,
+                      width: IMAGE_SIZE,
+                      height: IMAGE_SIZE + 16 + 14 + 4 + 4,
+                      border: `${BORDER_SIZE}px solid ${THEME_COLORS[themeIndex]}`,
                       textDecoration: "none",
                     }}
                     href={`https://ameblo.jp/${theme.amebaId}/entry-${entry.entry_id}.html`}
@@ -376,17 +377,21 @@ function ThumbnailList(props: {
                     <img
                       src={
                         entry.image_url
-                          ? `https://stat.ameba.jp${entry.image_url}?cpd=100`
+                          ? `https://stat.ameba.jp${entry.image_url}?cpd=${IMAGE_SIZE}`
                           : PLACEHOLDER_IMAGE_URL
                       }
                       srcSet={
                         entry.image_url
-                          ? `https://stat.ameba.jp${entry.image_url}?cpd=100 1x, https://stat.ameba.jp${entry.image_url}?cpd=200 2x`
+                          ? `https://stat.ameba.jp${
+                              entry.image_url
+                            }?cpd=${IMAGE_SIZE} 1x, https://stat.ameba.jp${
+                              entry.image_url
+                            }?cpd=${IMAGE_SIZE * 2} 2x`
                           : undefined
                       }
                       style={{
-                        width: "100px",
-                        height: "100px",
+                        width: IMAGE_SIZE,
+                        height: IMAGE_SIZE,
                         objectFit: "cover",
                       }}
                     />
