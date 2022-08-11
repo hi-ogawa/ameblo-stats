@@ -266,6 +266,7 @@ function ThumbnailList(props: {
     getScrollElement: () => scrollableRef.current,
     count: entryChunks.length,
     estimateSize: () => IMAGE_SIZE + 2 * BORDER_SIZE + 8, // border 3 + margin 4
+    overscan: 3,
   });
 
   // TODO: no rtl? https://github.com/TanStack/virtual/issues/282. for now, scroll to the end in order to fake rtl
