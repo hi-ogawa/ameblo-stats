@@ -39,4 +39,4 @@ jobs:
         with:
           node-version: "16.16.0"
       - run: pnpm i --frozen-lockfile
-      - run: npm run build
+      - run: npm run rakkas:build

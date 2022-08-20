@@ -1,8 +1,11 @@
 {
   "sideEffects": false,
+  "type": "module",
   "scripts": {
-    "dev": "concurrently -k 'npm:remix:dev' 'npm:tsc:dev' -c 'bgBlue.bold,bgYellow.bold'",
-    "remix:dev": "remix dev",
+    "dev": "concurrently -k 'npm:rakkas:dev' 'npm:tsc:dev' -c 'bgBlue.bold,bgYellow.bold'",
+    "rakkas:dev": "rakkas --no-clearScreen --port 3000",
+    "rakkas:build": "rakkas build",
+    "rakkas:build:vercel": "APP_RAKKAS_ADAPTER=vercel npm run rakkas:build && cp -f misc/vercel/config.json .vercel/output/config.json && cp -f misc/vercel/.vc-config.json .vercel/output/functions/index.func/.vc-config.json",
     "tsc": "tsc",
     "tsc:dev": "tsc --noEmit --watch --preserveWatchOutput",
     "lint": "npm run prettier && npm run eslint",
@@ -12,18 +15,14 @@
     "prettier:check": "prettier -c .",
     "prettier:diff": "prettier -w --ignore-unknown --no-error-on-unmatched-pattern $(npm run -s diff)",
     "eslint": "npm run eslint:check -- --fix",
-    "eslint:check": "eslint ./app --cache --ext .js,.jsx,.ts,.tsx",
-    "build": "bash misc/build-vercel.sh",
-    "deploy:staging": "npm run build && vercel deploy --prebuilt build/remix/production/deploy",
-    "deploy:production": "npm run build && vercel deploy --prebuilt build/remix/production/deploy --prod",
+    "eslint:check": "eslint ./src --cache --ext .js,.jsx,.ts,.tsx",
+    "deploy:staging": "npm run rakkas:build:vercel && vercel deploy --prebuilt .",
+    "deploy:production": "npm run rakkas:build:vercel && vercel deploy --prebuilt . --prod",
     "diff": "git diff --name-only ${DIFF_COMMIT:-HEAD} && git ls-files --others --exclude-standard",
     "qrcode": "qrcode-terminal http://$(ip -o -4 address list wlp3s0 | awk '{print $4}' | cut -d / -f 1):3000"
   },
   "dependencies": {
     "@rehooks/local-storage": "^2.4.4",
-    "@remix-run/node": "^1.6.7",
-    "@remix-run/react": "^1.6.7",
-    "@remix-run/server-runtime": "^1.6.7",
     "@tanstack/react-query": "^4.0.10",
     "@tanstack/react-virtual": "3.0.0-beta.17",
     "echarts": "^5.3.3",
@@ -33,13 +32,9 @@
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.34.0",
     "react-select": "^5.4.0",
-    "react-use": "^17.4.0",
     "zod": "^3.17.10"
   },
   "devDependencies": {
-    "@remix-run/dev": "^1.6.7",
-    "@remix-run/serve": "^1.6.7",
-    "@remix-run/vercel": "^1.6.7",
     "@types/lodash": "^4.14.182",
     "@types/node": "^16",
     "@types/qs": "^6.9.7",
@@ -54,7 +49,9 @@
     "eslint-plugin-import": "^2.26.0",
     "prettier": "^2.7.1",
     "qrcode-terminal": "^0.12.0",
-    "typescript": "^4.7.4"
+    "rakkasjs": "0.6.0",
+    "typescript": "^4.7.4",
+    "vite": "^3.0.9"
   },
   "volta": {
     "node": "16.16.0"

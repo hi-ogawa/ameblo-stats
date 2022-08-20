@@ -1,4 +1,4 @@
-import useLocalStorage from "@rehooks/local-storage";
+import { useLocalStorage } from "@rehooks/local-storage";
 import { useQueries } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { chunk, minBy, sortBy, zip } from "lodash";
@@ -18,8 +18,8 @@ import {
 } from "../utils/ameblo";
 import { fetchJson, isTruthy } from "../utils/misc";
 import { PLACEHOLDER_IMAGE_URL } from "../utils/placeholder";
-import { EntriesResponse } from "./entries";
-import { ThemesResponse } from "./themes";
+import { EntriesResponse } from "./api/entries.api";
+import { ThemesResponse } from "./api/themes.api";
 
 //
 // components
@@ -178,6 +178,7 @@ export default function PageComponent() {
           <NoSSR fallback={<div style={{ height: "38px" }}></div>}>
             <ReactSelect
               isMulti
+              isSearchable={false}
               placeholder="Select Themes"
               value={selectedThemes.map((t) => ({
                 label: t.theme_name,
@@ -610,7 +611,7 @@ function useThemes(amebaIds: string[]) {
       queryKey: ["themes", amebaId],
       queryFn: async () => {
         const data: ThemesResponse = await fetchJson(
-          "/themes?" + new URLSearchParams({ amebaId })
+          "/api/themes?" + new URLSearchParams({ amebaId })
         );
         return { amebaId, themes: data };
       },
@@ -627,7 +628,7 @@ function useEntries(themes: ThemeData[]) {
       queryKey: ["entries", t],
       queryFn: async () => {
         const data: EntriesResponse = await fetchJson(
-          "/entries?" +
+          "/api/entries?" +
             new URLSearchParams({ amebaId: t.amebaId, themeId: t.theme_id })
         );
         return { theme: t, entries: data };
