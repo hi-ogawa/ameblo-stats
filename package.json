@@ -1,6 +1,9 @@
 {
   "sideEffects": false,
+  "type": "module",
   "scripts": {
+    "rakkas:dev": "rakkas --port 3000",
+    "rakkas:build": "rakkas build",
     "dev": "concurrently -k 'npm:remix:dev' 'npm:tsc:dev' -c 'bgBlue.bold,bgYellow.bold'",
     "remix:dev": "remix dev",
     "tsc": "tsc",
@@ -54,7 +57,9 @@
     "eslint-plugin-import": "^2.26.0",
     "prettier": "^2.7.1",
     "qrcode-terminal": "^0.12.0",
-    "typescript": "^4.7.4"
+    "rakkasjs": "0.6.0",
+    "typescript": "^4.7.4",
+    "vite": "^3.0.9"
   },
   "volta": {
     "node": "16.16.0"
