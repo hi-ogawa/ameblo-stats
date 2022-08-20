@@ -178,6 +178,7 @@ export default function PageComponent() {
           <NoSSR fallback={<div style={{ height: "38px" }}></div>}>
             <ReactSelect
               isMulti
+              isSearchable={false}
               placeholder="Select Themes"
               value={selectedThemes.map((t) => ({
                 label: t.theme_name,
