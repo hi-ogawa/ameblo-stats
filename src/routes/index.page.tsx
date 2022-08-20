@@ -1,4 +1,4 @@
-import useLocalStorage from "@rehooks/local-storage";
+import { useLocalStorage } from "@rehooks/local-storage";
 import { useQueries } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { chunk, minBy, sortBy, zip } from "lodash";
