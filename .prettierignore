@@ -5,3 +5,4 @@ build
 .eslintcache
 pnpm-lock.yaml
 misc/old
+dist
