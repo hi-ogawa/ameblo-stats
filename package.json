@@ -2,10 +2,9 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "rakkas:dev": "rakkas --port 3000",
+    "dev": "concurrently -k 'npm:rakkas:dev' 'npm:tsc:dev' -c 'bgBlue.bold,bgYellow.bold'",
+    "rakkas:dev": "rakkas --no-clearScreen --port 3000",
     "rakkas:build": "rakkas build",
-    "dev": "concurrently -k 'npm:remix:dev' 'npm:tsc:dev' -c 'bgBlue.bold,bgYellow.bold'",
-    "remix:dev": "remix dev",
     "tsc": "tsc",
     "tsc:dev": "tsc --noEmit --watch --preserveWatchOutput",
     "lint": "npm run prettier && npm run eslint",
