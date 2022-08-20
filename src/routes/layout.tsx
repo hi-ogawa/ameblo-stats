@@ -1,6 +1,6 @@
-import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Head } from "rakkasjs";
+import React from "react";
 
 export default function Layout(props: React.PropsWithChildren) {
   return (

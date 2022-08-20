@@ -1,6 +1,6 @@
 import { RequestContext } from "rakkasjs";
 import { z } from "zod";
-import { getThemes, ThemeData } from "../../utils/ameblo";
+import { ThemeData, getThemes } from "../../utils/ameblo";
 import { json, parseQuery } from "../../utils/loader-utils";
 
 const REQ_SCHEME = z.object({

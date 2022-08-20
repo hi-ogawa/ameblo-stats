@@ -15,7 +15,7 @@
     "prettier:check": "prettier -c .",
     "prettier:diff": "prettier -w --ignore-unknown --no-error-on-unmatched-pattern $(npm run -s diff)",
     "eslint": "npm run eslint:check -- --fix",
-    "eslint:check": "eslint ./app --cache --ext .js,.jsx,.ts,.tsx",
+    "eslint:check": "eslint ./src --cache --ext .js,.jsx,.ts,.tsx",
     "deploy:staging": "npm run rakkas:build:vercel && vercel deploy --prebuilt .",
     "deploy:production": "npm run rakkas:build:vercel && vercel deploy --prebuilt . --prod",
     "diff": "git diff --name-only ${DIFF_COMMIT:-HEAD} && git ls-files --others --exclude-standard",
@@ -23,9 +23,6 @@
   },
   "dependencies": {
     "@rehooks/local-storage": "^2.4.4",
-    "@remix-run/node": "^1.6.7",
-    "@remix-run/react": "^1.6.7",
-    "@remix-run/server-runtime": "^1.6.7",
     "@tanstack/react-query": "^4.0.10",
     "@tanstack/react-virtual": "3.0.0-beta.17",
     "echarts": "^5.3.3",
@@ -35,13 +32,9 @@
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.34.0",
     "react-select": "^5.4.0",
-    "react-use": "^17.4.0",
     "zod": "^3.17.10"
   },
   "devDependencies": {
-    "@remix-run/dev": "^1.6.7",
-    "@remix-run/serve": "^1.6.7",
-    "@remix-run/vercel": "^1.6.7",
     "@types/lodash": "^4.14.182",
     "@types/node": "^16",
     "@types/qs": "^6.9.7",
