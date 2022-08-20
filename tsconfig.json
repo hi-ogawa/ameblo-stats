@@ -3,10 +3,10 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "build/tsc",
-    "module": "commonjs",
+    "module": "esnext",
     "target": "es2021",
     "lib": ["es2021", "dom"],
-    "types": ["@types/node"],
+    "types": ["@types/node", "vite/types/importMeta"],
     "moduleResolution": "node",
     "jsx": "react-jsx",
     "allowJs": false,
