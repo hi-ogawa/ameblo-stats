@@ -7,8 +7,8 @@ export function parseQuery(request: Request): any {
   });
 }
 
-export function json(data: any): Response {
-  return new Response(JSON.stringify(data), {
-    headers: { "content-type": "application/json" },
-  });
+export function json(data: any, init: any = {}): Response {
+  const headers = new Headers(init.headers);
+  headers.set("content-Type", "application/json; charset=utf-8");
+  return new Response(JSON.stringify(data), { ...init, headers });
 }
