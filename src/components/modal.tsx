@@ -6,6 +6,7 @@ import {
   useInteractions,
 } from "@floating-ui/react-dom-interactions";
 import { useId } from "react";
+import { isTruthy } from "../utils/misc";
 import { tinyassert } from "../utils/tinyassert";
 
 type GetFloatingProps = ReturnType<typeof useInteractions>["getFloatingProps"];
@@ -13,6 +14,7 @@ type GetFloatingProps = ReturnType<typeof useInteractions>["getFloatingProps"];
 export function Modal(props: {
   open: boolean;
   onClose: () => void;
+  useDismiss: boolean; // dismissing by overlay touch on mobile somehow triggers the link underneath, so for now, handle it manually
   render: (getFloatingProps: GetFloatingProps) => React.ReactNode;
 }) {
   const { floating, context } = useFloating({
@@ -22,7 +24,9 @@ export function Modal(props: {
       props.onClose();
     },
   });
-  const { getFloatingProps } = useInteractions([useDismiss(context)]);
+  const { getFloatingProps } = useInteractions(
+    [props.useDismiss && useDismiss(context)].filter(isTruthy)
+  );
   const id = useId();
 
   return (

@@ -386,8 +386,17 @@ function ThumbnailList(props: {
       <Modal
         open={Boolean(modalImageUrl)}
         onClose={() => setModalImageUrl(undefined)}
+        useDismiss={false}
         render={(getProps) => (
-          <div className="h-full flex justify-center items-center p-4">
+          <div
+            className="h-full w-full flex justify-center items-center p-4"
+            onClick={(e) => {
+              // useDismiss manually to workaround mobile touch propagation underneath
+              if (e.currentTarget === e.target) {
+                setModalImageUrl(undefined);
+              }
+            }}
+          >
             <img
               {...getProps()}
               className="max-h-full max-w-full flex-none"
