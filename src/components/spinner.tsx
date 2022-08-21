@@ -4,24 +4,9 @@ export function Spinner({
   size: NonNullable<React.CSSProperties["width"]>;
 }) {
   return (
-    <div className="spinner" style={{ width: size, height: size }}>
-      <style>{`
-        .spinner {
-          border: 2px solid #ddd;
-          border-radius: 50%;
-          border-top-color: #666;
-          border-left-color: #666;
-          animation: keyframes-spinner 1s linear infinite;
-        }
-        @keyframes keyframes-spinner {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-      `}</style>
-    </div>
+    <div
+      className="animate-spin rounded-full border-2 border-gray-500 border-top-gray-300 border-left-gray-300"
+      style={{ width: size, height: size }}
+    />
   );
 }
