@@ -429,7 +429,7 @@ function ThumbnailList(props: {
 const IMAGE_MARGIN = 20;
 
 function ImageCarousel(props: { imageUrls: string[]; defaultIndex?: number }) {
-  const itemWidth = useWindowWidth();
+  const itemWidth = Math.min(useWindowWidth(), 800);
   const imageWidth = itemWidth - 2 * IMAGE_MARGIN;
 
   const scrollableRef = React.useRef<HTMLDivElement>(null);
