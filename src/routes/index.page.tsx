@@ -177,29 +177,33 @@ export default function PageComponent() {
           </select>
         </label>
       </div>
-      {/*  */}
-      {/* chart */}
-      {/*  */}
-      <div className="relative w-full">
-        {entryQueries.some((q) => q.isLoading) && (
-          <div className="absolute right-8 top-0">
-            <Spinner size="24px" />
+      {(amebaIds.length > 0 || themeEntries.length > 0) && (
+        <>
+          {/*  */}
+          {/* chart */}
+          {/*  */}
+          <div className="relative w-full">
+            {entryQueries.some((q) => q.isLoading) && (
+              <div className="absolute right-8 top-0">
+                <Spinner size="24px" />
+              </div>
+            )}
+            <Chart
+              countType={countType}
+              themes={themeEntries}
+              setSelected={setSelected}
+            />
           </div>
-        )}
-        <Chart
-          countType={countType}
-          themes={themeEntries}
-          setSelected={setSelected}
-        />
-      </div>
-      {/*  */}
-      {/* thumbnails */}
-      {/*  */}
-      <ThumbnailList
-        themeEntries={themeEntries}
-        countType={countType}
-        selected={selected}
-      />
+          {/*  */}
+          {/* thumbnails */}
+          {/*  */}
+          <ThumbnailList
+            themeEntries={themeEntries}
+            countType={countType}
+            selected={selected}
+          />
+        </>
+      )}
     </div>
   );
 }
