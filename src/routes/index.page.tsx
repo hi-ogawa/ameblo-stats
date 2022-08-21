@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import ReactSelect, { OptionProps, components } from "react-select";
 import ReactSelectCreatable from "react-select/creatable";
 import { EchartsWrapper } from "../components/echarts-wrapper";
+import { Modal } from "../components/modal";
 import { NoSSR } from "../components/no-ssr";
 import { Spinner } from "../components/spinner";
 import {
@@ -195,6 +196,10 @@ export default function PageComponent() {
   );
 }
 
+//
+// ThumbnailList
+//
+
 // TODO: make it configurable?
 const NUM_ROWS = 3;
 const ROW_GAP = 8;
@@ -266,6 +271,11 @@ function ThumbnailList(props: {
     }
   }, [props.selected]);
 
+  //
+  // modal viewer state (TODO: implement another scrollable virtual list of images inside the modal)
+  //
+  const [modalImageUrl, setModalImageUrl] = React.useState<string>();
+
   return (
     <section>
       <div ref={scrollableRef} className="overflow-x-auto">
@@ -299,6 +309,7 @@ function ThumbnailList(props: {
               >
                 {entryChunks[item.index].map(({ theme, entry, themeIndex }) => (
                   <a
+                    className="entry-item"
                     key={entry.entry_id}
                     style={{
                       position: "relative",
@@ -321,27 +332,46 @@ function ThumbnailList(props: {
                     <span className="text-xs text-gray-500">
                       {entry.entry_created_datetime.slice(0, 10)}
                     </span>
-                    <img
-                      src={
-                        entry.image_url
-                          ? `https://stat.ameba.jp${entry.image_url}?cpd=${IMAGE_SIZE}`
-                          : PLACEHOLDER_IMAGE_URL
-                      }
-                      srcSet={
-                        entry.image_url
-                          ? `https://stat.ameba.jp${
-                              entry.image_url
-                            }?cpd=${IMAGE_SIZE} 1x, https://stat.ameba.jp${
-                              entry.image_url
-                            }?cpd=${IMAGE_SIZE * 2} 2x`
-                          : undefined
-                      }
-                      style={{
-                        width: IMAGE_SIZE,
-                        height: IMAGE_SIZE,
-                        objectFit: "cover",
-                      }}
-                    />
+                    <div
+                      className="relative"
+                      style={{ width: IMAGE_SIZE, height: IMAGE_SIZE }}
+                    >
+                      <img
+                        src={
+                          entry.image_url
+                            ? `https://stat.ameba.jp${entry.image_url}?cpd=${IMAGE_SIZE}`
+                            : PLACEHOLDER_IMAGE_URL
+                        }
+                        srcSet={
+                          entry.image_url
+                            ? `https://stat.ameba.jp${
+                                entry.image_url
+                              }?cpd=${IMAGE_SIZE} 1x, https://stat.ameba.jp${
+                                entry.image_url
+                              }?cpd=${IMAGE_SIZE * 2} 2x`
+                            : undefined
+                        }
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
+                      {entry.image_url && (
+                        <div
+                          className="entry-item__zoom-icon absolute right-0.5 top-1 p-0.5 rounded bg-black/75 text-gray-200 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            setModalImageUrl(entry.image_url);
+                          }}
+                          dangerouslySetInnerHTML={{
+                            // https://feathericons.com/?query=zoom-in
+                            __html: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-zoom-in"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>`,
+                          }}
+                        />
+                      )}
+                    </div>
                     <div className="absolute right-0.5 bottom-0.5 px-1 rounded bg-black/75 text-xs text-white">
                       {entry[props.countType]}
                     </div>
@@ -352,9 +382,48 @@ function ThumbnailList(props: {
           })}
         </div>
       </div>
+      <Modal
+        open={Boolean(modalImageUrl)}
+        onClose={() => setModalImageUrl(undefined)}
+        useDismiss={false}
+        render={(getProps) => (
+          <div
+            className="h-full w-full flex justify-center items-center p-4"
+            onClick={(e) => {
+              // useDismiss manually to workaround mobile touch propagation underneath
+              if (e.currentTarget === e.target) {
+                setModalImageUrl(undefined);
+              }
+            }}
+          >
+            <img
+              {...getProps()}
+              className="max-h-full max-w-full flex-none"
+              src={"https://stat.ameba.jp" + modalImageUrl}
+            />
+          </div>
+        )}
+      />
+      <style>{`
+        @media ${MEDIA_QUERY_HOVER_DEVICE} {
+          .entry-item__zoom-icon {
+            opacity: 0;
+            transition-property: opacity;
+            transition-duration: 250ms;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+          }
+          .entry-item:hover .entry-item__zoom-icon {
+            opacity: 1;
+          }
+        }
+      `}</style>
     </section>
   );
 }
+
+//
+// CustomAmebaIdOption
+//
 
 function CustomAmebaIdOption(props: OptionProps<any>) {
   const [amebaIdOptions, setAmebaIdOptions] = usePersistedAmebaIdOptions();
@@ -392,6 +461,10 @@ function CustomAmebaIdOption(props: OptionProps<any>) {
   );
 }
 
+//
+// Chart
+//
+
 function Chart(props: {
   themes: { theme: ThemeData; entries: EntriesResponse }[];
   countType: CountType;
@@ -421,7 +494,7 @@ function Chart(props: {
   }, [chart, props.countType, props.themes]);
 
   // tweak dataZoom for mobile
-  const isHoverDevice = useIsHoverDevice();
+  const isHoverDevice = useMatchMedia(MEDIA_QUERY_HOVER_DEVICE);
 
   const option = React.useMemo(() => {
     const option: echarts.EChartsOption = {
@@ -571,19 +644,19 @@ function useEntries(themes: ThemeData[]) {
   });
 }
 
-function useIsHoverDevice(): boolean {
+const MEDIA_QUERY_HOVER_DEVICE = "(any-hover: hover) and (any-pointer: fine)";
+
+function useMatchMedia(query: string): boolean {
   const [ok, setOk] = React.useState(true);
   React.useEffect(() => {
-    const query = window.matchMedia(
-      "(any-hover: hover) and (any-pointer: fine)"
-    );
+    const result = window.matchMedia(query);
     const handler = (e: { matches: boolean }) => {
       setOk(e.matches);
     };
-    handler(query);
-    query.addEventListener("change", handler);
+    handler(result);
+    result.addEventListener("change", handler);
     return () => {
-      query.addEventListener("change", handler);
+      result.addEventListener("change", handler);
     };
   }, []);
   return ok;
