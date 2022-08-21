@@ -275,6 +275,7 @@ function ThumbnailList(props: {
   // modal viewer state (TODO: implement another scrollable virtual list of images inside the modal)
   //
   const [modalImageUrl, setModalImageUrl] = React.useState<string>();
+  const isHoverDevice = useIsHoverDevice();
 
   return (
     <section>
@@ -385,17 +386,19 @@ function ThumbnailList(props: {
       <Modal
         open={Boolean(modalImageUrl)}
         onClose={() => setModalImageUrl(undefined)}
-      >
-        <div className="h-full flex justify-center items-center p-4">
-          <img
-            className="max-h-full max-w-full"
-            src={"https://stat.ameba.jp" + modalImageUrl}
-          />
-        </div>
-      </Modal>
+        render={(getProps) => (
+          <div className="h-full flex justify-center items-center p-4">
+            <img
+              {...getProps()}
+              className="max-h-full max-w-full flex-none"
+              src={"https://stat.ameba.jp" + modalImageUrl}
+            />
+          </div>
+        )}
+      />
       <style>{`
         .entry-item__zoom-icon {
-          opacity: 0;
+          opacity: ${isHoverDevice ? 0 : 1};
           transition-property: opacity;
           transition-duration: 250ms;
           transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -632,18 +635,20 @@ function useEntries(themes: ThemeData[]) {
 }
 
 function useIsHoverDevice(): boolean {
+  return useMatchMedia("(any-hover: hover) and (any-pointer: fine)");
+}
+
+function useMatchMedia(query: string): boolean {
   const [ok, setOk] = React.useState(true);
   React.useEffect(() => {
-    const query = window.matchMedia(
-      "(any-hover: hover) and (any-pointer: fine)"
-    );
+    const result = window.matchMedia(query);
     const handler = (e: { matches: boolean }) => {
       setOk(e.matches);
     };
-    handler(query);
-    query.addEventListener("change", handler);
+    handler(result);
+    result.addEventListener("change", handler);
     return () => {
-      query.addEventListener("change", handler);
+      result.addEventListener("change", handler);
     };
   }, []);
   return ok;

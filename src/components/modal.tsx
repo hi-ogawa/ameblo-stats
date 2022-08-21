@@ -8,10 +8,12 @@ import {
 import { useId } from "react";
 import { tinyassert } from "../utils/tinyassert";
 
+type GetFloatingProps = ReturnType<typeof useInteractions>["getFloatingProps"];
+
 export function Modal(props: {
   open: boolean;
   onClose: () => void;
-  children: React.ReactNode;
+  render: (getFloatingProps: GetFloatingProps) => React.ReactNode;
 }) {
   const { floating, context } = useFloating({
     open: props.open,
@@ -30,9 +32,9 @@ export function Modal(props: {
           lockScroll
           className="flex justify-center items-center bg-black/[0.2] z-[100] h-full"
         >
-          <div className="h-full" {...getFloatingProps({ ref: floating })}>
-            {props.children}
-          </div>
+          {props.render((userProps) =>
+            getFloatingProps({ ref: floating, ...userProps })
+          )}
         </FloatingOverlay>
       )}
     </FloatingPortal>
