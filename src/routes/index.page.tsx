@@ -41,25 +41,11 @@ export default function PageComponent() {
   const [amebaIdOptions, setAmebaIdOptions] = usePersistedAmebaIdOptions();
 
   const form = useForm<FormType>({
-    // pre-fill inputs for quick development
-    defaultValues: import.meta.env.DEV
-      ? {
-          amebaIds: ["ocha-norma"],
-          selectedThemes: [
-            {
-              amebaId: "ocha-norma",
-              theme_id: "10116081607",
-              theme_name: "中山夏月姫",
-              entry_cnt: 214,
-            },
-          ],
-          countType: "commentCnt",
-        }
-      : {
-          amebaIds: [],
-          selectedThemes: [],
-          countType: "commentCnt",
-        },
+    defaultValues: {
+      amebaIds: [],
+      selectedThemes: [],
+      countType: "commentCnt",
+    },
   });
   const { amebaIds, selectedThemes, countType } = form.watch();
 
@@ -106,36 +92,18 @@ export default function PageComponent() {
   React.useEffect(() => setSelected(undefined), [themeEntries]);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "1rem",
-      }}
-    >
+    <div className="flex flex-col gap-4 py-4">
+      {/*  */}
+      {/* form */}
+      {/*  */}
       {/* TODO: make "form" hideable (e.g. sidebar) */}
       <div
-        style={{
-          width: "800px",
-          maxWidth: "100%",
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          padding: "1rem 0", // HACK: horizontal padding is moved to children
-          gap: "0.8rem",
-          border: "1px solid lightgray",
-        }}
+        className="max-w-[800px] mx-auto flex flex-col py-4 gap-4 border border-gray-300"
+        style={{ width: "calc(100% - 2rem)" }}
       >
-        <label
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.3rem",
-            padding: "0 1rem",
-          }}
-        >
+        <label className="flex flex-col gap-1.5 px-4">
           <span>Ameba ID</span>
-          <NoSSR fallback={<div style={{ height: "38px" }}></div>}>
+          <NoSSR fallback={<div className="border rounded-[4px] h-[38px]" />}>
             <ReactSelectCreatable
               isMulti
               placeholder="Enter IDs"
@@ -160,21 +128,14 @@ export default function PageComponent() {
             />
           </NoSSR>
         </label>
-        <label
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.3rem",
-            padding: "0 1rem",
-          }}
-        >
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+        <label className="flex flex-col gap-1.5 px-4">
+          <div className="flex items-center gap-2">
             <span>Themes</span>
             {themeQueries.some((query) => query.isLoading) && (
-              <Spinner size="12px" />
+              <Spinner size="18px" />
             )}
           </div>
-          <NoSSR fallback={<div style={{ height: "38px" }}></div>}>
+          <NoSSR fallback={<div className="border rounded-[4px] h-[38px]" />}>
             <ReactSelect
               isMulti
               isSearchable={false}
@@ -193,16 +154,12 @@ export default function PageComponent() {
             />
           </NoSSR>
         </label>
-        <label
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.3rem",
-            padding: "0 1rem",
-          }}
-        >
+        <label className="flex flex-col gap-1.5 px-4">
           <span>Count type</span>
-          <select {...form.register("countType")}>
+          <select
+            className="border border-gray-300 bg-gray-50"
+            {...form.register("countType")}
+          >
             {COUNT_TYPES.map((value) => (
               <option key={value} value={value}>
                 {COUNT_TYPE_TO_NAME[value]}
@@ -211,9 +168,12 @@ export default function PageComponent() {
           </select>
         </label>
       </div>
-      <div style={{ position: "relative", width: "100%" }}>
+      {/*  */}
+      {/* chart */}
+      {/*  */}
+      <div className="relative w-full">
         {entryQueries.some((q) => q.isLoading) && (
-          <div style={{ position: "absolute", right: "2rem", top: "1rem" }}>
+          <div className="absolute right-8 top-0">
             <Spinner size="24px" />
           </div>
         )}
@@ -223,6 +183,9 @@ export default function PageComponent() {
           setSelected={setSelected}
         />
       </div>
+      {/*  */}
+      {/* thumbnails */}
+      {/*  */}
       <ThumbnailList
         themeEntries={themeEntries}
         countType={countType}
@@ -266,7 +229,6 @@ function ThumbnailList(props: {
     getScrollElement: () => scrollableRef.current,
     count: entryChunks.length,
     estimateSize: () => IMAGE_SIZE + 2 * BORDER_SIZE + 8, // border 3 + margin 4
-    overscan: 3,
   });
 
   // TODO: no rtl? https://github.com/TanStack/virtual/issues/282. for now, scroll to the end in order to fake rtl
@@ -306,15 +268,15 @@ function ThumbnailList(props: {
 
   return (
     <section>
-      <div ref={scrollableRef} style={{ overflowX: "auto" }}>
+      <div ref={scrollableRef} className="overflow-x-auto">
         <div
           style={{
             // layout virtual container
             position: "relative",
             width: `${virtualizer.getTotalSize()}px`,
-            height:
-              (IMAGE_SIZE + 16 + 14 + 4 + 4 + 4 + 2 * BORDER_SIZE) * NUM_ROWS +
-              ROW_GAP * (NUM_ROWS - 1),
+            // it's tedious to compute this container height exactly, so just set the large height temporary and then check the actual height via devtool
+            // height: "1000px"
+            height: "610px",
           }}
         >
           {virtualizer.getVirtualItems().map((item) => {
@@ -344,37 +306,19 @@ function ThumbnailList(props: {
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
-                      paddingTop: "4px",
-                      gap: "4px",
-                      width: IMAGE_SIZE,
-                      height: IMAGE_SIZE + 16 + 14 + 4 + 4,
+                      gap: "2px",
+                      width: IMAGE_SIZE + 2 * BORDER_SIZE,
                       border: `${BORDER_SIZE}px solid ${THEME_COLORS[themeIndex]}`,
                       textDecoration: "none",
                     }}
                     href={`https://ameblo.jp/${theme.amebaId}/entry-${entry.entry_id}.html`}
                     target="_blank"
+                    title={entry.entry_title}
                   >
-                    {/* TODO: can we centerize text with truncate? */}
-                    <span
-                      style={{
-                        color: "#444",
-                        lineHeight: "16px",
-                        fontSize: "14px",
-                        width: "calc(100% - 4px)",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
+                    <span className="m-0.5 text-sm text-gray-700 line-clamp-1">
                       {entry.entry_title}
                     </span>
-                    <span
-                      style={{
-                        color: "#666",
-                        lineHeight: "14px",
-                        fontSize: "12px",
-                      }}
-                    >
+                    <span className="text-xs text-gray-500">
                       {entry.entry_created_datetime.slice(0, 10)}
                     </span>
                     <img
@@ -398,18 +342,7 @@ function ThumbnailList(props: {
                         objectFit: "cover",
                       }}
                     />
-                    <div
-                      style={{
-                        position: "absolute",
-                        right: "1px",
-                        bottom: "1px",
-                        padding: "1px 3px",
-                        borderRadius: "4px",
-                        background: "rgba(0, 0, 0, 0.75)",
-                        color: "#fff",
-                        fontSize: "14px",
-                      }}
-                    >
+                    <div className="absolute right-0.5 bottom-0.5 px-1 rounded bg-black/75 text-xs text-white">
                       {entry[props.countType]}
                     </div>
                   </a>
@@ -426,38 +359,35 @@ function ThumbnailList(props: {
 function CustomAmebaIdOption(props: OptionProps<any>) {
   const [amebaIdOptions, setAmebaIdOptions] = usePersistedAmebaIdOptions();
   return (
-    <div style={{ display: "flex", alignItems: "center" }}>
+    <div className="flex items-center">
       <components.Option {...props} />
       <span
-        style={{
-          flex: "none",
-          cursor: "pointer",
-          margin: "0 4px",
-          color: "#444",
-          transform: "scale(0.8)",
-        }}
+        className="flex-none cursor-pointer mx-1 text-gray-400 hover:text-gray-600"
         onClick={(e) => {
           e.preventDefault();
           const idToRemove = (props as any).value;
           setAmebaIdOptions(amebaIdOptions.filter((id) => id !== idToRemove));
         }}
-      >
-        {/* https://feathericons.com/?query=close */}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </span>
+        dangerouslySetInnerHTML={{
+          // https://feathericons.com/?query=close
+          __html: `
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        `,
+        }}
+      />
     </div>
   );
 }
