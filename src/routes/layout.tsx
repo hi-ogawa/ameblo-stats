@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Head } from "rakkasjs";
 import React from "react";
 import "virtual:windi.css";
@@ -8,7 +9,7 @@ export default function Layout(props: React.PropsWithChildren) {
     <>
       <Head
         title="ameblo-stats"
-        // overwritten by rakkas internally https://github.com/rakkasjs/rakkasjs/blob/114afc1842d3044940f7dc8cde11d696368bd6dc/packages/rakkasjs/src/features/pages/middleware.tsx#L480-L481
+        // TODO: overwritten by rakkas internally https://github.com/rakkasjs/rakkasjs/blob/114afc1842d3044940f7dc8cde11d696368bd6dc/packages/rakkasjs/src/features/pages/middleware.tsx#L480-L481
         // meta={[
         //   <meta charSet="utf-8" />,
         //   <meta
@@ -19,7 +20,10 @@ export default function Layout(props: React.PropsWithChildren) {
       />
       {/* hack for https://github.com/rehooks/local-storage/blob/db301e64d3db82f75775bdb477ca42feb5e3e49b/src/local-storage-events.ts#L14 */}
       <script>{`window.global = window;`}</script>
-      <Providers>{props.children}</Providers>
+      <Providers>
+        {props.children}
+        {import.meta.env.DEV && <ReactQueryDevtools />}
+      </Providers>
     </>
   );
 }

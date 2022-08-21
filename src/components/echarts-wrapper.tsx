@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import * as echarts from "echarts";
 import React from "react";
 
 export function EchartsWrapper(props: {
@@ -8,9 +8,6 @@ export function EchartsWrapper(props: {
 }) {
   const ref = React.useRef(null);
   const instance = React.useRef<echarts.ECharts>();
-
-  // dynamic import echarts https://github.com/remix-run/remix/issues/129
-  const { data: echarts } = usePromise(() => import("echarts"));
 
   React.useEffect(() => {
     if (!instance.current && ref.current && echarts) {
@@ -44,13 +41,4 @@ export function EchartsWrapper(props: {
   }, [echarts, props.option]);
 
   return <div ref={ref} style={props.style} />;
-}
-
-function usePromise<T>(f: () => Promise<T>) {
-  return useQuery({
-    queryKey: [usePromise.name, f.toString()],
-    queryFn: f,
-    staleTime: Infinity,
-    cacheTime: Infinity,
-  });
 }
