@@ -275,7 +275,6 @@ function ThumbnailList(props: {
   // modal viewer state (TODO: implement another scrollable virtual list of images inside the modal)
   //
   const [modalImageUrl, setModalImageUrl] = React.useState<string>();
-  const isHoverDevice = useIsHoverDevice();
 
   return (
     <section>
@@ -406,14 +405,16 @@ function ThumbnailList(props: {
         )}
       />
       <style>{`
-        .entry-item__zoom-icon {
-          opacity: ${isHoverDevice ? 0 : 1};
-          transition-property: opacity;
-          transition-duration: 250ms;
-          transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .entry-item:hover .entry-item__zoom-icon {
-          opacity: 1;
+        @media ${MEDIA_QUERY_HOVER_DEVICE} {
+          .entry-item__zoom-icon {
+            opacity: 0;
+            transition-property: opacity;
+            transition-duration: 250ms;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+          }
+          .entry-item:hover .entry-item__zoom-icon {
+            opacity: 1;
+          }
         }
       `}</style>
     </section>
@@ -493,7 +494,7 @@ function Chart(props: {
   }, [chart, props.countType, props.themes]);
 
   // tweak dataZoom for mobile
-  const isHoverDevice = useIsHoverDevice();
+  const isHoverDevice = useMatchMedia(MEDIA_QUERY_HOVER_DEVICE);
 
   const option = React.useMemo(() => {
     const option: echarts.EChartsOption = {
@@ -643,9 +644,7 @@ function useEntries(themes: ThemeData[]) {
   });
 }
 
-function useIsHoverDevice(): boolean {
-  return useMatchMedia("(any-hover: hover) and (any-pointer: fine)");
-}
+const MEDIA_QUERY_HOVER_DEVICE = "(any-hover: hover) and (any-pointer: fine)";
 
 function useMatchMedia(query: string): boolean {
   const [ok, setOk] = React.useState(true);
