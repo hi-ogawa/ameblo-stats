@@ -442,10 +442,13 @@ function ImageCarousel(props: { imageUrls: string[]; defaultIndex?: number }) {
 
   React.useEffect(() => {
     if (props.defaultIndex) {
-      virtualizer.scrollToIndex(props.defaultIndex, {
-        align: "start",
-        smoothScroll: false,
-      });
+      virtualizer.scrollToOffset(
+        itemWidth * props.defaultIndex + itemWidth / 2,
+        {
+          align: "center",
+          smoothScroll: false,
+        }
+      );
     }
   }, []);
 
