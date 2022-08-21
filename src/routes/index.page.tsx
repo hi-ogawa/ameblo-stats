@@ -4,11 +4,9 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { chunk, minBy, sortBy, zip } from "lodash";
 import React from "react";
 import { useForm } from "react-hook-form";
-import ReactSelect, { OptionProps, components } from "react-select";
-import ReactSelectCreatable from "react-select/creatable";
-import { EchartsWrapper } from "../components/echarts-wrapper";
+import { OptionProps, components } from "react-select";
+import { LazyComponent } from "../components/lazy-component";
 import { Modal } from "../components/modal";
-import { NoSSR } from "../components/no-ssr";
 import { Spinner } from "../components/spinner";
 import {
   COUNT_TYPES,
@@ -104,30 +102,36 @@ export default function PageComponent() {
       >
         <label className="flex flex-col gap-1.5 px-4">
           <span>Ameba ID</span>
-          <NoSSR fallback={<div className="border rounded-[4px] h-[38px]" />}>
-            <ReactSelectCreatable
-              isMulti
-              placeholder="Enter IDs"
-              components={{ Option: CustomAmebaIdOption }}
-              value={amebaIds.map((value) => ({ label: value, value }))}
-              options={amebaIdOptions.map((value) => ({
-                label: value,
-                value,
-              }))}
-              onCreateOption={(created) => {
-                form.setValue("amebaIds", [...amebaIds, created]);
-                if (!amebaIdOptions.includes(created)) {
-                  setAmebaIdOptions([...amebaIdOptions, created]);
-                }
-              }}
-              onChange={(selected) => {
-                form.setValue(
-                  "amebaIds",
-                  selected.map((s) => s.value)
-                );
-              }}
-            />
-          </NoSSR>
+          <LazyComponent
+            fallback={<div className="border rounded-[4px] h-[38px]" />}
+            importer={() =>
+              import("react-select/creatable").then((lib) => lib.default)
+            }
+            render={(ReactSelectCreatable) => (
+              <ReactSelectCreatable
+                isMulti
+                placeholder="Enter IDs"
+                components={{ Option: CustomAmebaIdOption }}
+                value={amebaIds.map((value) => ({ label: value, value }))}
+                options={amebaIdOptions.map((value) => ({
+                  label: value,
+                  value,
+                }))}
+                onCreateOption={(created) => {
+                  form.setValue("amebaIds", [...amebaIds, created]);
+                  if (!amebaIdOptions.includes(created)) {
+                    setAmebaIdOptions([...amebaIdOptions, created]);
+                  }
+                }}
+                onChange={(selected) => {
+                  form.setValue(
+                    "amebaIds",
+                    selected.map((s) => s.value)
+                  );
+                }}
+              />
+            )}
+          />
         </label>
         <label className="flex flex-col gap-1.5 px-4">
           <div className="flex items-center gap-2">
@@ -136,24 +140,28 @@ export default function PageComponent() {
               <Spinner size="18px" />
             )}
           </div>
-          <NoSSR fallback={<div className="border rounded-[4px] h-[38px]" />}>
-            <ReactSelect
-              isMulti
-              isSearchable={false}
-              placeholder="Select Themes"
-              value={selectedThemes.map((t) => ({
-                label: t.theme_name,
-                value: t,
-              }))}
-              options={themeOptions}
-              onChange={(selected) => {
-                form.setValue(
-                  "selectedThemes",
-                  (selected as any[]).map((s) => s.value)
-                );
-              }}
-            />
-          </NoSSR>
+          <LazyComponent
+            fallback={<div className="border rounded-[4px] h-[38px]" />}
+            importer={() => import("react-select").then((lib) => lib.default)}
+            render={(ReactSelect) => (
+              <ReactSelect
+                isMulti
+                isSearchable={false}
+                placeholder="Select Themes"
+                value={selectedThemes.map((t) => ({
+                  label: t.theme_name,
+                  value: t,
+                }))}
+                options={themeOptions}
+                onChange={(selected) => {
+                  form.setValue(
+                    "selectedThemes",
+                    (selected as any[]).map((s) => s.value)
+                  );
+                }}
+              />
+            )}
+          />
         </label>
         <label className="flex flex-col gap-1.5 px-4">
           <span>Count type</span>
@@ -169,29 +177,33 @@ export default function PageComponent() {
           </select>
         </label>
       </div>
-      {/*  */}
-      {/* chart */}
-      {/*  */}
-      <div className="relative w-full">
-        {entryQueries.some((q) => q.isLoading) && (
-          <div className="absolute right-8 top-0">
-            <Spinner size="24px" />
+      {(amebaIds.length > 0 || themeEntries.length > 0) && (
+        <>
+          {/*  */}
+          {/* chart */}
+          {/*  */}
+          <div className="relative w-full">
+            {entryQueries.some((q) => q.isLoading) && (
+              <div className="absolute right-8 top-0">
+                <Spinner size="24px" />
+              </div>
+            )}
+            <Chart
+              countType={countType}
+              themes={themeEntries}
+              setSelected={setSelected}
+            />
           </div>
-        )}
-        <Chart
-          countType={countType}
-          themes={themeEntries}
-          setSelected={setSelected}
-        />
-      </div>
-      {/*  */}
-      {/* thumbnails */}
-      {/*  */}
-      <ThumbnailList
-        themeEntries={themeEntries}
-        countType={countType}
-        selected={selected}
-      />
+          {/*  */}
+          {/* thumbnails */}
+          {/*  */}
+          <ThumbnailList
+            themeEntries={themeEntries}
+            countType={countType}
+            selected={selected}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -631,10 +643,20 @@ function Chart(props: {
   }, [props.countType, props.themes, isHoverDevice]);
 
   return (
-    <EchartsWrapper
-      option={option}
-      style={{ width: "100%", height: "250px" }}
-      setInstance={setChart}
+    <LazyComponent
+      fallback={<div style={{ width: "100%", height: "250px" }} />}
+      importer={() =>
+        import("../components/echarts-wrapper").then(
+          (lib) => lib.EchartsWrapper
+        )
+      }
+      render={(EchartsWrapper) => (
+        <EchartsWrapper
+          option={option}
+          style={{ width: "100%", height: "250px" }}
+          setInstance={setChart}
+        />
+      )}
     />
   );
 }
