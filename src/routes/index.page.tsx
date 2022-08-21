@@ -92,9 +92,15 @@ export default function PageComponent() {
   React.useEffect(() => setSelected(undefined), [themeEntries]);
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-4 py-4">
+      {/*  */}
+      {/* form */}
+      {/*  */}
       {/* TODO: make "form" hideable (e.g. sidebar) */}
-      <div className="w-full max-w-[800px] mx-auto flex flex-col py-4 gap-4 border border-gray-300">
+      <div
+        className="max-w-[800px] mx-auto flex flex-col py-4 gap-4 border border-gray-300"
+        style={{ width: "calc(100% - 2rem)" }}
+      >
         <label className="flex flex-col gap-1.5 px-4">
           <span>Ameba ID</span>
           <NoSSR fallback={<div className="border rounded-[4px] h-[38px]" />}>
@@ -123,10 +129,10 @@ export default function PageComponent() {
           </NoSSR>
         </label>
         <label className="flex flex-col gap-1.5 px-4">
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <span>Themes</span>
             {themeQueries.some((query) => query.isLoading) && (
-              <Spinner size="12px" />
+              <Spinner size="18px" />
             )}
           </div>
           <NoSSR fallback={<div className="border rounded-[4px] h-[38px]" />}>
@@ -162,9 +168,12 @@ export default function PageComponent() {
           </select>
         </label>
       </div>
+      {/*  */}
+      {/* chart */}
+      {/*  */}
       <div className="relative w-full">
         {entryQueries.some((q) => q.isLoading) && (
-          <div className="absolute right-4 top-2">
+          <div className="absolute right-8 top-0">
             <Spinner size="24px" />
           </div>
         )}
@@ -174,6 +183,9 @@ export default function PageComponent() {
           setSelected={setSelected}
         />
       </div>
+      {/*  */}
+      {/* thumbnails */}
+      {/*  */}
       <ThumbnailList
         themeEntries={themeEntries}
         countType={countType}
