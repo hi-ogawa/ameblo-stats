@@ -272,9 +272,12 @@ function ThumbnailList(props: {
   }, [props.selected]);
 
   //
-  // modal viewer state (TODO: implement another scrollable virtual list of images inside the modal)
+  // modal image viewer state
   //
-  const [modalImageUrl, setModalImageUrl] = React.useState<string>();
+  const [zoomImageUrl, setZoomImageUrl] = React.useState<string>();
+  const imageUrls = entries
+    .map(({ entry }) => entry.image_url)
+    .filter(isTruthy);
 
   return (
     <section>
@@ -363,7 +366,7 @@ function ThumbnailList(props: {
                           onClick={(e) => {
                             e.stopPropagation();
                             e.preventDefault();
-                            setModalImageUrl(entry.image_url);
+                            setZoomImageUrl(entry.image_url);
                           }}
                           dangerouslySetInnerHTML={{
                             // https://feathericons.com/?query=zoom-in
@@ -383,23 +386,21 @@ function ThumbnailList(props: {
         </div>
       </div>
       <Modal
-        open={Boolean(modalImageUrl)}
-        onClose={() => setModalImageUrl(undefined)}
+        open={Boolean(zoomImageUrl)}
+        onClose={() => setZoomImageUrl(undefined)}
         useDismiss={false}
-        render={(getProps) => (
+        render={() => (
           <div
-            className="h-full w-full flex justify-center items-center p-4"
+            className="h-full w-full flex justify-center items-center py-[20px]"
             onClick={(e) => {
-              // useDismiss manually to workaround mobile touch propagation underneath
-              if (e.currentTarget === e.target) {
-                setModalImageUrl(undefined);
+              if (!(e.target instanceof HTMLImageElement)) {
+                setZoomImageUrl(undefined);
               }
             }}
           >
-            <img
-              {...getProps()}
-              className="max-h-full max-w-full flex-none"
-              src={"https://stat.ameba.jp" + modalImageUrl}
+            <ImageCarousel
+              imageUrls={imageUrls}
+              defaultIndex={imageUrls.indexOf(zoomImageUrl!)}
             />
           </div>
         )}
@@ -418,6 +419,59 @@ function ThumbnailList(props: {
         }
       `}</style>
     </section>
+  );
+}
+
+//
+// ImageCarousel
+//
+
+const IMAGE_MARGIN = 20;
+
+function ImageCarousel(props: { imageUrls: string[]; defaultIndex?: number }) {
+  const itemWidth = useWindowWidth();
+  const imageWidth = itemWidth - 2 * IMAGE_MARGIN;
+
+  const scrollableRef = React.useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    horizontal: true,
+    getScrollElement: () => scrollableRef.current,
+    count: props.imageUrls.length,
+    estimateSize: () => itemWidth,
+  });
+
+  React.useEffect(() => {
+    if (props.defaultIndex) {
+      virtualizer.scrollToIndex(props.defaultIndex, {
+        align: "start",
+        smoothScroll: false,
+      });
+    }
+  }, []);
+
+  return (
+    <div ref={scrollableRef} className="h-full overflow-x-auto">
+      <div
+        className="relative h-full flex items-center"
+        style={{ width: virtualizer.getTotalSize() }}
+      >
+        {virtualizer.getVirtualItems().map((item) => (
+          <img
+            key={item.key}
+            className="absolute max-h-full"
+            style={{
+              top: "50%",
+              left: 0,
+              transform: `translateX(${item.start}px) translateY(-50%)`,
+              width: imageWidth,
+              margin: `0 ${IMAGE_MARGIN}px`,
+              objectFit: "cover",
+            }}
+            src={"https://stat.ameba.jp" + props.imageUrls[item.index]}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -660,4 +714,18 @@ function useMatchMedia(query: string): boolean {
     };
   }, []);
   return ok;
+}
+
+function useWindowWidth() {
+  const [_, reset] = React.useState(0);
+
+  React.useEffect(() => {
+    const handler = () => reset((c) => ++c);
+    window.addEventListener("resize", handler);
+    return () => {
+      window.removeEventListener("resize", handler);
+    };
+  }, []);
+
+  return window.innerWidth;
 }
