@@ -42,25 +42,24 @@ export default function PageComponent() {
 
   const form = useForm<FormType>({
     // pre-fill inputs for quick development
-    defaultValues:
-      process.env.NODE_ENV == "development"
-        ? {
-            amebaIds: ["ocha-norma"],
-            selectedThemes: [
-              {
-                amebaId: "ocha-norma",
-                theme_id: "10116081607",
-                theme_name: "中山夏月姫",
-                entry_cnt: 214,
-              },
-            ],
-            countType: "commentCnt",
-          }
-        : {
-            amebaIds: [],
-            selectedThemes: [],
-            countType: "commentCnt",
-          },
+    defaultValues: import.meta.env.DEV
+      ? {
+          amebaIds: ["ocha-norma"],
+          selectedThemes: [
+            {
+              amebaId: "ocha-norma",
+              theme_id: "10116081607",
+              theme_name: "中山夏月姫",
+              entry_cnt: 214,
+            },
+          ],
+          countType: "commentCnt",
+        }
+      : {
+          amebaIds: [],
+          selectedThemes: [],
+          countType: "commentCnt",
+        },
   });
   const { amebaIds, selectedThemes, countType } = form.watch();
 
