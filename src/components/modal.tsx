@@ -34,7 +34,7 @@ export function Modal(props: {
       {props.open && (
         <FloatingOverlay
           lockScroll
-          className="flex justify-center items-center bg-black/[0.2] z-[100] h-full"
+          className="flex justify-center items-center bg-black/[0.75] z-[100] h-full"
         >
           {props.render((userProps) =>
             getFloatingProps({ ref: floating, ...userProps })
